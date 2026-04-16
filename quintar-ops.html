@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quintar Game Day Ops</title>
+<link href="https://fonts.googleapis.com/css2?family=Questrial&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #000000;
+    --white: #FFFFFF;
+    --blue: #62B3C6;
+    --blue-glow: rgba(98,179,198,0.35);
+    --green: #3DBE7A;
+    --green-glow: rgba(61,190,122,0.3);
+    --amber: #E8A838;
+    --amber-glow: rgba(232,168,56,0.3);
+    --red: #E05252;
+    --gray100: #F2F2F2;
+    --gray200: #C8C9C7;
+    --gray300: #97999B;
+    --gray400: #75787B;
+    --gray500: #53565A;
+    --bg: #0a0b0d;
+    --card: #111316;
+    --card2: #16191d;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(135deg, #0a0b0d 0%, #0d1419 100%);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 14px; }
+
+  .logo {
+    font-family: 'Questrial', sans-serif;
+    font-size: 20px;
+    color: var(--white);
+    letter-spacing: 0.04em;
+  }
+  .logo span { color: var(--blue); }
+
+  .event-badge {
+    background: rgba(98,179,198,0.12);
+    border: 1px solid rgba(98,179,198,0.3);
+    color: var(--blue);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+  .timer {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    color: var(--gray300);
+  }
+  .timer span { color: var(--white); font-weight: 600; font-size: 15px; }
+
+  .progress-pill {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--gray300);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .progress-pill .pct { color: var(--green); font-weight: 600; }
+
+  .progress-bar-mini {
+    width: 80px;
+    height: 4px;
+    background: var(--gray500);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-bar-mini-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--green));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* PHASE PROGRESS INDICATOR — above the fold */
+  .phase-progress {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: var(--card);
+    position: sticky;
+    top: 56px;
+    z-index: 99;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .phase-pip {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .phase-pip:last-child { border-right: none; }
+
+  .phase-pip::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: transparent;
+    transition: background 0.3s ease;
+  }
+
+  .phase-pip.pip-complete::after { background: var(--green); }
+  .phase-pip.pip-active::after { background: var(--blue); box-shadow: 0 0 8px var(--blue-glow); }
+  .phase-pip.pip-pending::after { background: transparent; }
+
+  .phase-pip.pip-complete { background: rgba(61,190,122,0.05); }
+  .phase-pip.pip-active { background: rgba(98,179,198,0.08); }
+
+  .pip-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+  }
+
+  .pip-complete .pip-icon { background: var(--green); color: #000; }
+  .pip-active .pip-icon { background: var(--blue); color: #000; animation: pulse 2s infinite; }
+  .pip-pending .pip-icon { background: var(--gray500); color: var(--gray300); }
+
+  .pip-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .pip-complete .pip-label { color: var(--green); }
+  .pip-active .pip-label { color: var(--blue); }
+  .pip-pending .pip-label { color: var(--gray500); }
+
+  .pip-fraction {
+    font-size: 9px;
+    color: var(--gray400);
+    white-space: nowrap;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* GO LIVE pip special state */
+  .phase-pip.pip-live {
+    background: rgba(61,190,122,0.12);
+  }
+  .phase-pip.pip-live::after {
+    background: var(--green);
+    height: 3px;
+    box-shadow: 0 0 12px var(--green-glow);
+  }
+  .phase-pip.pip-live .pip-icon {
+    background: var(--green);
+    color: #000;
+    box-shadow: 0 0 10px var(--green-glow);
+    animation: pulse-green 1.5s infinite;
+  }
+  .phase-pip.pip-live .pip-label {
+    color: var(--green);
+    font-weight: 600;
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 var(--green-glow); }
+    50% { box-shadow: 0 0 0 6px transparent; }
+  }
+
+  @media (max-width: 900px) {
+    .phase-pip { padding: 8px 10px; }
+    .pip-label { font-size: 9px; }
+    .pip-fraction { display: none; }
+  }
+
+  @media (max-width: 600px) {
+    .phase-progress { top: 48px; }
+    .phase-pip { min-width: 80px; flex: 0 0 auto; }
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    gap: 20px;
+    padding: 12px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--gray300);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot.pending { background: var(--gray500); }
+  .dot.active { background: var(--blue); box-shadow: 0 0 6px var(--blue); }
+  .dot.complete { background: var(--green); }
+  .dot.flagged { background: var(--amber); }
+  .dot.blocked { background: var(--red); }
+
+  /* MAIN LAYOUT */
+  .main { padding: 20px 16px 60px; max-width: 1400px; margin: 0 auto; }
+
+  /* PHASE HEADER */
+  .phase-section { margin-bottom: 32px; }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 0 4px;
+  }
+
+  .phase-label {
+    font-family: 'Questrial', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gray300);
+  }
+
+  .phase-line {
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+  }
+
+  .phase-count {
+    font-size: 11px;
+    color: var(--gray500);
+    font-weight: 600;
+  }
+
+  /* PARALLEL TRACKS */
+  .tracks {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 900px) {
+    .tracks { grid-template-columns: 1fr; }
+  }
+
+  .track-header {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-radius: 6px 6px 0 0;
+    margin-bottom: 4px;
+  }
+  .track-vps { color: var(--blue); background: rgba(98,179,198,0.08); border: 1px solid rgba(98,179,198,0.15); border-bottom: none; }
+  .track-video { color: #A78BFA; background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.15); border-bottom: none; }
+  .track-sport { color: var(--amber); background: rgba(232,168,56,0.08); border: 1px solid rgba(232,168,56,0.15); border-bottom: none; }
+
+  /* STEP CARDS */
+  .step-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .step-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 3px 0 0 3px;
+  }
+
+  .step-card.pending::before { background: var(--gray500); }
+  .step-card.active::before { background: var(--blue); box-shadow: 0 0 8px var(--blue-glow); }
+  .step-card.complete::before { background: var(--green); }
+  .step-card.flagged::before { background: var(--amber); }
+  .step-card.blocked::before { background: var(--red); }
+
+  .step-card.active {
+    border-color: rgba(98,179,198,0.3);
+    background: linear-gradient(135deg, #111316 0%, #0f1c22 100%);
+    box-shadow: 0 0 20px rgba(98,179,198,0.08);
+  }
+
+  .step-card.complete {
+    border-color: rgba(61,190,122,0.2);
+    opacity: 0.75;
+  }
+
+  .step-card.flagged {
+    border-color: rgba(232,168,56,0.25);
+  }
+
+  .step-card:hover {
+    border-color: rgba(255,255,255,0.15);
+    transform: translateY(-1px);
+  }
+
+  .step-card.complete:hover { opacity: 0.9; }
+
+  .step-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .step-title {
+    font-family: 'Questrial', sans-serif;
+    font-size: 14px;
+    color: var(--white);
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  .step-card.complete .step-title { color: var(--gray300); }
+
+  .step-status-icon {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .step-status-icon.pending { background: var(--gray500); color: var(--gray300); }
+  .step-status-icon.active { background: var(--blue); color: #000; animation: pulse 2s infinite; }
+  .step-status-icon.complete { background: var(--green); color: #000; }
+  .step-status-icon.flagged { background: var(--amber); color: #000; }
+  .step-status-icon.blocked { background: var(--red); color: #fff; }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--blue-glow); }
+    50% { box-shadow: 0 0 0 6px transparent; }
+  }
+
+  .step-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .owner-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--gray300);
+  }
+
+  .avatar {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--gray500);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--white);
+    flex-shrink: 0;
+  }
+
+  .cat-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--gray400);
+    background: rgba(255,255,255,0.05);
+  }
+
+  .flag-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--amber);
+    background: rgba(232,168,56,0.1);
+    border: 1px solid rgba(232,168,56,0.2);
+  }
+
+  .parallel-tag {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--blue);
+    background: rgba(98,179,198,0.1);
+    font-weight: 600;
+  }
+
+  /* STEP DETAIL DRAWER */
+  .step-detail {
+    display: none;
+    background: var(--card2);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 12px 14px;
+    margin-top: 8px;
+    border-radius: 0 0 8px 8px;
+    font-size: 12px;
+    color: var(--gray300);
+  }
+
+  .step-detail.open { display: block; }
+
+  .detail-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: flex-start;
+  }
+  .detail-label {
+    font-weight: 600;
+    color: var(--gray400);
+    min-width: 60px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-top: 1px;
+  }
+  .detail-value { color: var(--gray200); line-height: 1.4; }
+
+  .detail-note {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: rgba(232,168,56,0.07);
+    border-left: 2px solid var(--amber);
+    border-radius: 0 4px 4px 0;
+    color: var(--amber);
+    font-size: 11px;
+  }
+
+  /* CONVERGENCE ARROW */
+  .converge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+    gap: 8px;
+    color: var(--gray500);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .converge-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gray500), transparent);
+  }
+
+  /* SINGLE TRACK */
+  .single-track { margin-bottom: 8px; }
+
+  /* GO LIVE */
+  .go-live {
+    background: linear-gradient(135deg, #0a1a0f 0%, #0d1f16 100%);
+    border: 1px solid rgba(61,190,122,0.4);
+    border-radius: 14px;
+    padding: 20px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .go-live::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(61,190,122,0.12) 0%, transparent 65%);
+  }
+
+  .go-live-label {
+    font-family: 'Questrial', sans-serif;
+    font-size: 28px;
+    color: var(--green);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    position: relative;
+    text-shadow: 0 0 30px rgba(61,190,122,0.5);
+  }
+
+  .go-live-sub {
+    font-size: 12px;
+    color: var(--gray400);
+    margin-top: 4px;
+    position: relative;
+    letter-spacing: 0.08em;
+  }
+
+  /* MONITORING ROW */
+  .monitor-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .monitor-row { grid-template-columns: 1fr; }
+    .header { padding: 12px 16px; }
+    .main { padding: 16px 12px 60px; }
+    .legend { padding: 10px 16px; gap: 12px; }
+  }
+
+  /* ACTION BUTTON — tap to complete, long press for flyout */
+  .action-wrap {
+    position: relative;
+    margin-top: 10px;
+  }
+
+  .action-btn {
+    width: 100%;
+    padding: 9px;
+    border-radius: 8px;
+    border: 1px solid rgba(98,179,198,0.4);
+    background: rgba(98,179,198,0.08);
+    color: var(--blue);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .action-btn:hover { background: rgba(98,179,198,0.15); border-color: var(--blue); }
+
+  .action-btn.status-pending {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.03);
+    color: var(--gray300);
+  }
+
+  .action-btn.status-pending:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: rgba(98,179,198,0.08);
+  }
+
+  .action-btn.done {
+    border-color: rgba(61,190,122,0.4);
+    background: rgba(61,190,122,0.08);
+    color: var(--green);
+  }
+
+  .action-btn.status-flagged {
+    border-color: rgba(232,168,56,0.4);
+    background: rgba(232,168,56,0.08);
+    color: var(--amber);
+  }
+
+  .action-btn.status-blocked {
+    border-color: rgba(224,82,82,0.4);
+    background: rgba(224,82,82,0.08);
+    color: var(--red);
+  }
+
+  /* Hold indicator — fills left to right on long press */
+  .action-btn .hold-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 0%;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    transition: width 0.4s linear;
+    pointer-events: none;
+  }
+
+  .action-btn.holding .hold-fill {
+    width: 100%;
+  }
+
+  .action-btn-label {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Flyout menu */
+  .flyout {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    overflow: visible;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+    z-index: 50;
+    animation: flyout-in 0.15s ease-out;
+  }
+
+  .flyout.open { display: block; }
+
+  @keyframes flyout-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .flyout-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .flyout-option:not(:last-child) {
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .flyout-option:hover { background: rgba(255,255,255,0.05); }
+
+  .flyout-option.opt-flag { color: var(--amber); }
+  .flyout-option.opt-blocked { color: var(--red); }
+  .flyout-option.opt-undo { color: var(--gray300); }
+  .flyout-option.opt-pending { color: var(--gray300); }
+
+  .flyout-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Note input inside flyout */
+  .flyout-note-form {
+    padding: 10px 14px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: none;
+  }
+
+  .flyout-note-form.open { display: block; }
+
+  .flyout-note-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+
+  .flyout-note-label.label-flag { color: var(--amber); }
+  .flyout-note-label.label-blocked { color: var(--red); }
+
+  .flyout-note-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    color: var(--white);
+    resize: none;
+    outline: none;
+    min-height: 48px;
+    transition: border-color 0.2s ease;
+  }
+
+  .flyout-note-input:focus {
+    border-color: rgba(255,255,255,0.25);
+  }
+
+  .flyout-note-input::placeholder {
+    color: var(--gray500);
+  }
+
+  .flyout-note-submit {
+    margin-top: 8px;
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+
+  .flyout-note-submit:hover { opacity: 0.85; }
+
+  .flyout-note-submit.submit-flag {
+    background: var(--amber);
+    color: #000;
+  }
+
+  .flyout-note-submit.submit-blocked {
+    background: var(--red);
+    color: var(--white);
+  }
+
+  /* User note displayed in detail drawer */
+  .detail-user-note {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 0 4px 4px 0;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .detail-user-note.note-flag {
+    background: rgba(232,168,56,0.07);
+    border-left: 2px solid var(--amber);
+    color: var(--amber);
+  }
+
+  .detail-user-note.note-blocked {
+    background: rgba(224,82,82,0.07);
+    border-left: 2px solid var(--red);
+    color: var(--red);
+  }
+
+  .detail-user-note-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+
+  /* Step timer in accordion */
+  .step-timer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: rgba(98,179,198,0.06);
+    border: 1px solid rgba(98,179,198,0.12);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--gray300);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .step-timer-icon {
+    font-size: 12px;
+    color: var(--blue);
+  }
+
+  .step-timer-value {
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  .step-timer.timer-complete {
+    background: rgba(61,190,122,0.06);
+    border-color: rgba(61,190,122,0.12);
+  }
+
+  .step-timer.timer-complete .step-timer-icon { color: var(--green); }
+  .step-timer.timer-complete .step-timer-value { color: var(--green); }
+
+  /* SEQ NUMBER */
+  .seq-num {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--gray500);
+    margin-bottom: 2px;
+  }
+
+  .section-title {
+    font-family: 'Questrial', sans-serif;
+    font-size: 15px;
+    color: var(--white);
+    margin-bottom: 4px;
+  }
+
+  .connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    color: var(--gray500);
+    font-size: 16px;
+  }
+
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo">QUINTAR<span>.</span></div>
+    <div class="event-badge">Game Day Ops</div>
+  </div>
+  <div class="header-right">
+    <div class="timer">Elapsed: <span id="elapsed">00:00:00</span></div>
+    <div class="progress-pill">
+      <span class="pct" id="pct-label">0%</span>
+      <div class="progress-bar-mini"><div class="progress-bar-mini-fill" id="prog-fill" style="width:0%"></div></div>
+      <span id="done-count">0</span>/<span id="total-count">0</span> steps
+    </div>
+  </div>
+</header>
+
+<nav class="phase-progress" id="phase-progress"></nav>
+
+<div class="legend">
+  <div class="legend-item"><div class="dot pending"></div> Pending</div>
+  <div class="legend-item"><div class="dot active"></div> Active</div>
+  <div class="legend-item"><div class="dot complete"></div> Complete</div>
+  <div class="legend-item"><div class="dot flagged"></div> Needs Attention</div>
+  <div class="legend-item"><div class="dot blocked"></div> Blocked</div>
+</div>
+
+<div class="main" id="app"></div>
+
+<script>
+const steps = [
+  // ── PHASE 1: SURVEY PREP ──
+  { id:'s1', phase:'Pre-Event: Survey & Prep', track:'vps', seq:1, title:'Survey Preparations', cat:'Survey Prep', input:'Goals of event', output:'Site plan', owner:'Ted', note:null, status:'complete', pct:95 },
+  { id:'s2', phase:'Pre-Event: Survey & Prep', track:'vps', seq:2, title:'Survey App Download (iOS)', cat:'Survey', input:'Site plan', output:'Verified Survey App', owner:'Durga Raj / Ted', note:'P1 — Portal with authentication & authorization', status:'complete', pct:null },
+  { id:'s3', phase:'Pre-Event: Survey & Prep', track:'vps', seq:3, title:'Survey Location', cat:'Survey', input:'Survey App & Site plan', output:'Survey files @ venue', owner:'Ted', note:'P1 — Training Doc + App + Auth (TestFlight)', status:'complete', pct:null },
+  { id:'s4', phase:'Pre-Event: Survey & Prep', track:'vps', seq:4, title:'Survey File Upload & Management', cat:'Survey', input:'Survey files @ venue', output:'Survey files @ cloud', owner:'Yogesh / Durga Raj', note:'Portal or Google Drive?', status:'active', pct:null },
+  { id:'s5', phase:'Pre-Event: Survey & Prep', track:'vps', seq:5, title:'Survey App User Training & Tutorials', cat:'Survey', input:'—', output:'Trained user', owner:'Ted', note:'Portal or First-time user experience (FTUE)', status:'pending', pct:null },
+
+  // ── PHASE 2: PARALLEL TRACKS ──
+  // VPS
+  { id:'v1', phase:'Parallel Processing', track:'vps', seq:6, title:'RegAR Control Tool — Model Building', cat:'Reg Model Ops', input:'Survey files @ cloud', output:'VPS model', owner:'Yogesh / Rick', note:null, status:'pending', pct:null },
+  { id:'v2', phase:'Parallel Processing', track:'vps', seq:7, title:'Configuration — Reg Server', cat:'Config', input:'VPS model', output:'VPS model live', owner:'Rick / Vahagn', note:'Can happen in parallel', status:'pending', pct:null },
+  { id:'v3', phase:'Parallel Processing', track:'vps', seq:8, title:'Test VPS Registration Around Venue', cat:'VPS Quality', input:'VPS model live', output:'VPS quality feedback', owner:'Buddy', note:null, status:'pending', pct:null },
+  { id:'v4', phase:'Parallel Processing', track:'vps', seq:9, title:'Fill Survey Gaps', cat:'VPS Quality', input:'VPS quality feedback', output:'Additional survey files', owner:'Operations Team', note:null, status:'pending', pct:null },
+  { id:'v5', phase:'Parallel Processing', track:'vps', seq:10, title:'VPS Model Rebuild', cat:'VPS Quality', input:'Survey files + fill-in', output:'VPS model v2', owner:'Rick Paris', note:null, status:'pending', pct:null },
+
+  // VIDEO
+  { id:'vid1', phase:'Parallel Processing', track:'video', seq:6, title:'Camera Setup — Stereo Separation & Zoom', cat:'Venue', input:'Initial camera placement', output:'Camera positioned', owner:'Operations Team', note:null, status:'pending', pct:null },
+  { id:'vid2', phase:'Parallel Processing', track:'video', seq:7, title:'Connect Video Pipeline & Verify Streams', cat:'Venue', input:'Connection info / IP address', output:'Video feeds live', owner:'Operations Team', note:null, status:'pending', pct:null },
+  { id:'vid3', phase:'Parallel Processing', track:'video', seq:8, title:'Adjust Spatial Stream Camera Stereo Alignment', cat:'Venue', input:'Video feeds', output:'Stereo video feeds', owner:'Operations Team', note:'Kyle building optimization tool', status:'pending', pct:null },
+  { id:'vid4', phase:'Parallel Processing', track:'video', seq:9, title:'Stereo Single Frame', cat:'Pipeline', input:'Stereo video feeds', output:'Stereo frame', owner:'Kyle Siehl', note:null, status:'pending', pct:null },
+  { id:'vid5', phase:'Parallel Processing', track:'video', seq:10, title:'Stereo Single Frame Rectification', cat:'Pipeline', input:'Stereo frame', output:'Stereo rectification data', owner:'Wayne / Rick / Yogesh', note:'Wayne working on a tool', status:'pending', pct:null },
+  { id:'vid6', phase:'Parallel Processing', track:'video', seq:11, title:'Create Stereo Hard Mask', cat:'Pipeline', input:'PNG monochrome', output:'PNG B&W 1-bit mask', owner:'Charlie / Kyle', note:null, status:'pending', pct:null },
+  { id:'vid7', phase:'Parallel Processing', track:'video', seq:12, title:'Create Stereo Static Mask', cat:'Pipeline', input:'Stereo rectified frames', output:'PNG monochrome', owner:'Charlie', note:null, status:'pending', pct:null },
+  { id:'vid8', phase:'Parallel Processing', track:'video', seq:13, title:'Configure & Apply Rectification Params', cat:'Config', input:'Rectification data', output:'Video pipeline with rectified video', owner:'Kyle / Yogesh', note:null, status:'pending', pct:null },
+  { id:'vid9', phase:'Parallel Processing', track:'video', seq:14, title:'Sync Videos', cat:'Configure', input:'Rectified streams', output:'Synced videos', owner:'Kyle / Yogesh', note:null, status:'pending', pct:null },
+  { id:'vid10', phase:'Parallel Processing', track:'video', seq:15, title:'Cloud Video Processing', cat:'Pipeline', input:'Stereo feed + rect data + hard mask', output:'Stereo video served', owner:'Kyle Siehl', note:null, status:'pending', pct:null },
+  { id:'vid11', phase:'Parallel Processing', track:'video', seq:16, title:'Tune Video Ladders', cat:'Pipeline', input:'Stereo video served', output:'Optimized video', owner:'Kyle Siehl', note:'⚠ We don\'t have this yet — We need it', status:'flagged', pct:null },
+  { id:'vid12', phase:'Parallel Processing', track:'video', seq:17, title:'Configure — Static Mask', cat:'Config', input:'Stereo video served', output:'Stereo video ready', owner:'Kyle / Yogesh', note:null, status:'pending', pct:null },
+  { id:'vid13', phase:'Parallel Processing', track:'video', seq:18, title:'Configure — Video Streaming URLs', cat:'Config', input:'Stereo video served', output:'Stereo video ready', owner:'Yogesh', note:null, status:'pending', pct:null },
+  { id:'vid14', phase:'Parallel Processing', track:'video', seq:19, title:'Check Video Pipeline Output on HMD', cat:'Test', input:'Stereo video ready', output:'Stereo video approved', owner:'Charlie', note:null, status:'pending', pct:null },
+  { id:'vid15', phase:'Parallel Processing', track:'video', seq:20, title:'Check Video Mask', cat:'Test', input:'Stereo video ready', output:'Stereo video approved', owner:'Charlie / Buddy', note:null, status:'pending', pct:null },
+
+  // SPORT DATA
+  { id:'sd1', phase:'Parallel Processing', track:'sport', seq:6, title:'Configuration — Sport Data Setup', cat:'Config', input:'—', output:'Sport data configured', owner:'Lakshay Bansal', note:null, status:'pending', pct:null },
+  { id:'sd2', phase:'Parallel Processing', track:'sport', seq:7, title:'Sport Data Ingest & Serve', cat:'Sport Data', input:'Sport data source', output:'Sport data served', owner:'Lakshay / Goutham', note:'Done prior to pipeline — not part of live pipeline', status:'pending', pct:null },
+  { id:'sd3', phase:'Parallel Processing', track:'sport', seq:8, title:'Configure — Sport Data', cat:'Config', input:'Sport data served', output:'Sport data ready', owner:'Lakshay Bansal', note:null, status:'pending', pct:null },
+
+  // ── PHASE 3: CONVERGENCE ──
+  { id:'e1', phase:'Convergence & Config', track:'single', seq:'—', title:'Event Setup (Sport, GameID, Location, Teams)', cat:'Pipeline', input:'Event info from League/Team/Sport', output:'Event set up complete', owner:'Yogesh', note:null, status:'pending', pct:null },
+  { id:'e2', phase:'Convergence & Config', track:'single', seq:'—', title:'Infra Provisioning (Registration, Sport Data, S3, Region)', cat:'Pipeline', input:'VPS model', output:'Endpoints in config', owner:'Vahagn / Rajesh', note:null, status:'pending', pct:null },
+  { id:'e3', phase:'Convergence & Config', track:'single', seq:'—', title:'Adjust Sport Data Timing Sync to Video', cat:'Config Tuning', input:'Stereo video ready + sport data ready', output:'Sport & video in sync', owner:'Lakshay / Buddy / Charlie', note:null, status:'pending', pct:null },
+  { id:'e4', phase:'Convergence & Config', track:'single', seq:'—', title:'Configure — Frame Segments', cat:'Config', input:'—', output:'—', owner:'Charlie', note:'⚠ We don\'t know who the target user is', status:'flagged', pct:null },
+  { id:'e5', phase:'Convergence & Config', track:'single', seq:'—', title:'Configure — Scale Factor', cat:'Config', input:'Stereo video', output:'Correct spatial placement', owner:'Charlie', note:null, status:'pending', pct:null },
+  { id:'e6', phase:'Convergence & Config', track:'single', seq:'—', title:'Monitoring — Sport Data', cat:'Monitoring', input:'—', output:'Report if issues', owner:'Buddy / Charlie', note:null, status:'pending', pct:null },
+
+  // ── PHASE 4: OVERLAYS ──
+  { id:'o1', phase:'Overlays & Final Tuning', track:'single', seq:'—', title:'Configure — Overlays', cat:'Config Tuning', input:'Stereo video approved', output:'Overlays render OK', owner:'Charlie / Mikey / Goutham / Atharva', note:'⚠ We need more information here', status:'flagged', pct:null },
+  { id:'o2', phase:'Overlays & Final Tuning', track:'single', seq:'—', title:'Configure — FOP UI Adjustment (fix large disparity)', cat:'Config Tuning', input:'Overlays render OK', output:'Overlays placed OK', owner:'Charlie', note:null, status:'pending', pct:null },
+  { id:'o3', phase:'Overlays & Final Tuning', track:'single', seq:'—', title:'Tune Stereo Disparity (calibration rings on field)', cat:'Config Tuning', input:'Overlays placed OK', output:'Overlays placement polished', owner:'Charlie', note:null, status:'pending', pct:null },
+  { id:'o4', phase:'Overlays & Final Tuning', track:'single', seq:'—', title:'Check Data Overlays & Sport Data Sync', cat:'Test', input:'Overlays placement polished', output:'Spatial stream approved', owner:'Buddy / Charlie', note:null, status:'pending', pct:null },
+
+  // ── MONITORING ──
+  { id:'m1', phase:'Post-Live Monitoring', track:'mon', seq:'—', title:'Monitoring — Video Stream', cat:'Monitoring', input:'—', output:'Report if issues', owner:'TBD', note:'⚠ We don\'t have this yet — We need it', status:'flagged', pct:null },
+  { id:'m2', phase:'Post-Live Monitoring', track:'mon', seq:'—', title:'Monitoring — Sport Data (Live)', cat:'Monitoring', input:'—', output:'Report if issues', owner:'Buddy / Charlie', note:null, status:'pending', pct:null },
+];
+
+// State
+const checked = {};
+let startTime = null;
+let timerInt = null;
+
+// Per-step timing: { stepId: { activatedAt: timestamp, completedAt: timestamp|null } }
+const stepTimers = {};
+
+// Track which steps were auto-activated by completing a given step: { completedStepId: [activatedStepId, ...] }
+const activationChain = {};
+
+// Per-step user notes: { stepId: { type: 'flag'|'blocked', text: 'reason' } }
+const stepNotes = {};
+
+// Flyout state
+let activeFlyout = null;
+let longPressTimer = null;
+const LONG_PRESS_MS = 400;
+
+// Initialize timers for steps that start as active
+steps.forEach(s => {
+  if (s.status === 'active') {
+    stepTimers[s.id] = { activatedAt: Date.now(), completedAt: null };
+  }
+});
+
+// Update step timers every second
+setInterval(() => {
+  document.querySelectorAll('.step-timer-live').forEach(el => {
+    const id = el.dataset.stepId;
+    const timer = stepTimers[id];
+    if (timer && !timer.completedAt) {
+      el.textContent = formatDuration(Date.now() - timer.activatedAt);
+    }
+  });
+}, 1000);
+
+function formatDuration(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m ${s % 60}s`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+}
+
+function initials(name) {
+  return name.split(/[\s\/]+/).map(n=>n[0]||'').slice(0,2).join('').toUpperCase();
+}
+
+function statusIcon(s) {
+  if(s==='complete') return '✓';
+  if(s==='active') return '▶';
+  if(s==='flagged') return '!';
+  if(s==='blocked') return '✕';
+  return '○';
+}
+
+function getStatus(step) {
+  if(checked[step.id]) return 'complete';
+  return step.status;
+}
+
+function updateProgress() {
+  const total = steps.length;
+  const done = Object.keys(checked).length + steps.filter(s=>s.status==='complete'&&!checked[s.id]&&checked[s.id]!==false).length;
+  const completedInData = steps.filter(s=>s.status==='complete').length;
+  const checkedCount = Object.keys(checked).length;
+  const totalDone = completedInData + checkedCount;
+  const pct = Math.round((totalDone/total)*100);
+  document.getElementById('pct-label').textContent = pct+'%';
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('done-count').textContent = totalDone;
+  document.getElementById('total-count').textContent = total;
+}
+
+let suppressToggleUntil = 0;
+function toggleDetail(id) {
+  if (Date.now() < suppressToggleUntil) return;
+  const el = document.getElementById('detail-'+id);
+  if(!el) return;
+  el.classList.toggle('open');
+}
+
+// ===== LONG PRESS + LIFTOFF INTERACTION =====
+// Flow: tap = complete | hold = flyout opens | slide to option + liftoff = activates
+
+let longPressActive = false;  // true once flyout has opened from a hold
+let longPressStepId = null;   // which step's flyout is open from a hold
+let noteFormOpen = false;     // true when note form is showing (switch to click mode)
+
+
+function startLongPress(id, btn, e) {
+  // If note form is visible, don't interfere
+  if (noteFormOpen) return;
+
+  cancelLongPress(id, btn);
+  btn.classList.add('holding');
+
+  // Release pointer capture so events can fire on flyout options during slide
+  try {
+    if (e.pointerId != null) btn.releasePointerCapture(e.pointerId);
+  } catch(_) {}
+
+  longPressTimer = setTimeout(() => {
+    btn.classList.remove('holding');
+    longPressTimer = null;
+    longPressActive = true;
+    longPressStepId = id;
+    openFlyout(id);
+  }, LONG_PRESS_MS);
+}
+
+function endLongPress(id, btn, e) {
+  btn.classList.remove('holding');
+  if (noteFormOpen) {
+    longPressTimer = null;
+    return;
+  }
+
+  // Flyout is open from long press — check if pointer is over a flyout option
+  if (longPressActive && activeFlyout) {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    longPressActive = false;
+    longPressStepId = null;
+
+    // Check what's under the pointer at release
+    if (e && e.clientX != null) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      // elementFromPoint check
+      if (el) {
+        const option = el.closest('.flyout-option');
+        if (option) {
+          const onclickAttr = option.getAttribute('onclick') || '';
+          const match = onclickAttr.match(/activateOption\(event,'(\w+)','([^']+)'\)/);
+          if (match) {
+            activateOption(e, match[1], match[2]);
+            return;
+          }
+        }
+      }
+    }
+
+    // Lifted off but not on an option — keep flyout open for tap
+    return;
+  }
+
+  if (longPressTimer) {
+    // Short press — tap action
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+
+    if (activeFlyout) {
+      closeFlyouts();
+      return;
+    }
+
+    const step = steps.find(s => s.id === id);
+    const st = getStatus(step);
+    if (st === 'pending') {
+      activateStep(id);
+    } else if (st === 'active') {
+      checkStep(id);
+    }
+  }
+}
+
+function cancelLongPress(id, btn) {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+  btn.classList.remove('holding');
+}
+
+// Flyout option activated — either via liftoff (pointerup) or tap (click)
+// Debounce to prevent double-fire when both pointerup and click trigger
+let lastOptionActivation = 0;
+function activateOption(e, action, id) {
+  e.preventDefault();
+  const now = Date.now();
+  if (now - lastOptionActivation < 300) return;
+  lastOptionActivation = now;
+
+  // Suppress the spurious toggleDetail + closeFlyouts that fire after slide-liftoff
+  suppressToggleUntil = now + 500;
+  suppressCloseUntil = now + 500;
+
+  if (action === 'undo') {
+    undoStep(id);
+  } else if (action === 'flag') {
+    showNoteForm(id, 'flag');
+  } else if (action === 'blocked') {
+    showNoteForm(id, 'blocked');
+  } else if (action === 'pending') {
+    deactivateStep(id);
+  }
+}
+
+function openFlyout(id) {
+  closeFlyouts();
+  const flyout = document.getElementById('flyout-' + id);
+  if (flyout) {
+    flyout.classList.add('open');
+    activeFlyout = id;
+  }
+}
+
+let suppressCloseUntil = 0;
+function closeFlyouts() {
+  if (Date.now() < suppressCloseUntil) return;
+  if (activeFlyout) {
+    const f = document.getElementById('flyout-' + activeFlyout);
+    if (f) {
+      f.classList.remove('open');
+      const noteForm = f.querySelector('.flyout-note-form');
+      if (noteForm) noteForm.classList.remove('open');
+    }
+    activeFlyout = null;
+  }
+  longPressActive = false;
+  longPressStepId = null;
+  noteFormOpen = false;
+}
+
+// Close flyouts on tap outside — but not inside the flyout, action-wrap, or note form
+document.addEventListener('pointerdown', (e) => {
+  if (!activeFlyout) return;
+  // Don't close if interacting with the note form
+  if (noteFormOpen && e.target.closest('.flyout-note-form')) return;
+  const flyoutEl = document.getElementById('flyout-' + activeFlyout);
+  const actionWrap = flyoutEl ? flyoutEl.closest('.action-wrap') : null;
+  if (flyoutEl && !flyoutEl.contains(e.target) && (!actionWrap || !actionWrap.contains(e.target))) {
+    closeFlyouts();
+  }
+});
+
+// ===== NOTE FORM HANDLERS =====
+let pendingNoteAction = {}; // { stepId: 'flag'|'blocked' }
+
+function showNoteForm(id, type) {
+  pendingNoteAction = { id, type };
+  noteFormOpen = true;
+  const form = document.getElementById('note-form-' + id);
+  const label = document.getElementById('note-label-' + id);
+  const submit = document.getElementById('note-submit-' + id);
+  const input = document.getElementById('note-input-' + id);
+  if (!form) return;
+
+  form.classList.add('open');
+  if (type === 'flag') {
+    label.className = 'flyout-note-label label-flag';
+    label.textContent = 'Why does this need attention?';
+    submit.className = 'flyout-note-submit submit-flag';
+    submit.textContent = 'Flag Step';
+  } else {
+    label.className = 'flyout-note-label label-blocked';
+    label.textContent = 'What\'s blocking this step?';
+    submit.className = 'flyout-note-submit submit-blocked';
+    submit.textContent = 'Mark Blocked';
+  }
+  input.value = '';
+  setTimeout(() => input.focus(), 50);
+}
+
+function submitNote(id) {
+  const input = document.getElementById('note-input-' + id);
+  const text = input ? input.value.trim() : '';
+  if (!text) {
+    input.style.borderColor = 'var(--red)';
+    input.setAttribute('placeholder', 'Please add a reason');
+    return;
+  }
+
+  const { type } = pendingNoteAction;
+  stepNotes[id] = { type, text };
+
+  if (type === 'flag') {
+    flagStep(id, text);
+  } else {
+    blockStep(id, text);
+  }
+  pendingNoteAction = {};
+}
+
+// ===== STATE CHANGES =====
+function flagStep(id, noteText) {
+  closeFlyouts();
+  const step = steps.find(s => s.id === id);
+  if (!step) return;
+
+  delete checked[id];
+  step.status = 'flagged';
+
+  const reason = noteText || (stepNotes[id] && stepNotes[id].text) || '';
+  sendSlackNotification(
+    `"${step.title}" has been flagged — needs attention.${reason ? ' Reason: ' + reason : ''}`,
+    step.owner
+  );
+
+  // Flag does NOT block the flow — advance next step
+  advanceNextStep(id);
+
+  render();
+}
+
+function blockStep(id, noteText) {
+  closeFlyouts();
+  const step = steps.find(s => s.id === id);
+  if (!step) return;
+
+  delete checked[id];
+  step.status = 'blocked';
+
+  const reason = noteText || (stepNotes[id] && stepNotes[id].text) || '';
+  sendSlackNotification(
+    `"${step.title}" is BLOCKED. Escalation needed.${reason ? ' Reason: ' + reason : ''}`,
+    step.owner
+  );
+
+  render();
+}
+
+function undoStep(id) {
+  closeFlyouts();
+  const step = steps.find(s => s.id === id);
+  if (!step) return;
+
+  // Revert this step
+  delete checked[id];
+  delete stepNotes[id];
+  step.status = 'active';
+  delete stepTimers[id];
+  stepTimers[id] = { activatedAt: Date.now(), completedAt: null };
+
+  // Revert downstream steps that were auto-activated by this step
+  if (activationChain[id]) {
+    activationChain[id].forEach(downstreamId => {
+      const ds = steps.find(s => s.id === downstreamId);
+      if (ds && getStatus(ds) !== 'complete') {
+        ds.status = 'pending';
+        delete checked[downstreamId];
+        delete stepTimers[downstreamId];
+      }
+    });
+    delete activationChain[id];
+  }
+
+  sendSlackNotification(
+    `"${step.title}" has been reverted — step is back to active.`,
+    step.owner
+  );
+
+  render();
+}
+
+// Advance the chain — activate the next pending step(s) after a step completes or is flagged
+function advanceNextStep(id) {
+  const step = steps.find(s => s.id === id);
+  if (!step) return [];
+
+  const stepIdx = steps.indexOf(step);
+  const currentPhase = step.phase;
+  const activated = [];
+
+  // Find next pending step in the same track/phase
+  const samePhaseNext = steps.filter((s, i) =>
+    i > stepIdx && s.phase === currentPhase && s.track === step.track && getStatus(s) === 'pending'
+  );
+
+  if (samePhaseNext.length > 0) {
+    samePhaseNext[0].status = 'active';
+    stepTimers[samePhaseNext[0].id] = { activatedAt: Date.now(), completedAt: null };
+    activated.push(samePhaseNext[0].id);
+  }
+
+  // If this was the last step in the phase (all complete or flagged), activate next phase
+  const phaseSteps = steps.filter(s => s.phase === currentPhase);
+  const allPhaseDone = phaseSteps.every(s => {
+    const st = getStatus(s);
+    return st === 'complete' || st === 'flagged' || s.id === id;
+  });
+
+  if (allPhaseDone) {
+    const nextPhaseSteps = steps.filter((s, i) =>
+      i > stepIdx && s.phase !== currentPhase && getStatus(s) === 'pending'
+    );
+    if (nextPhaseSteps.length > 0) {
+      const nextPhase = nextPhaseSteps[0].phase;
+      const nextPhasePending = steps.filter(s => s.phase === nextPhase && getStatus(s) === 'pending');
+      // Activate first pending in each track (handles parallel tracks)
+      const tracks = [...new Set(nextPhasePending.map(s => s.track))];
+      tracks.forEach(track => {
+        const firstInTrack = nextPhasePending.find(s => s.track === track);
+        if (firstInTrack && !activated.includes(firstInTrack.id)) {
+          firstInTrack.status = 'active';
+          stepTimers[firstInTrack.id] = { activatedAt: Date.now(), completedAt: null };
+          activated.push(firstInTrack.id);
+        }
+      });
+    }
+  }
+
+  // Track activation chain for undo
+  if (activated.length > 0) {
+    activationChain[id] = activated;
+  }
+
+  // Slack notifications
+  activated.forEach(aId => {
+    const ns = steps.find(s => s.id === aId);
+    if (ns) {
+      sendSlackNotification(
+        `"${step.title}" is done. Your step is up next: *${ns.title}* (${ns.cat})`,
+        ns.owner
+      );
+    }
+  });
+
+  return activated;
+}
+
+// Manually activate a pending step — starts its timer
+function activateStep(id) {
+  const step = steps.find(s => s.id === id);
+  if (!step) return;
+  step.status = 'active';
+  stepTimers[id] = { activatedAt: Date.now(), completedAt: null };
+
+  sendSlackNotification(
+    `"${step.title}" is now active. ${step.owner}, you're up!`,
+    step.owner
+  );
+
+  render();
+}
+
+// Revert an active step back to pending — cancels its timer
+function deactivateStep(id) {
+  const step = steps.find(s => s.id === id);
+  if (!step || getStatus(step) !== 'active') return;
+  step.status = 'pending';
+  delete stepTimers[id];
+  closeFlyouts();
+  render();
+}
+
+function checkStep(id) {
+  if(checked[id]) return;
+  checked[id] = true;
+  if(!startTime) {
+    startTime = Date.now();
+    timerInt = setInterval(updateTimer, 1000);
+  }
+
+  // Record completion time
+  if (stepTimers[id]) {
+    stepTimers[id].completedAt = Date.now();
+  }
+
+  // Auto-advance the chain (activates next step, sends Slack notifications)
+  advanceNextStep(id);
+
+  // Check if all steps are done — GO LIVE
+  const allDone = steps.every(s => getStatus(s) === 'complete');
+  if (allDone) {
+    sendSlackNotification('ALL SYSTEMS GO — STREAM IS LIVE! All game day ops steps complete.');
+  }
+
+  render();
+}
+
+function updateTimer() {
+  if(!startTime) return;
+  const elapsed = Date.now()-startTime;
+  const h = Math.floor(elapsed/3600000).toString().padStart(2,'0');
+  const m = Math.floor((elapsed%3600000)/60000).toString().padStart(2,'0');
+  const s = Math.floor((elapsed%60000)/1000).toString().padStart(2,'0');
+  document.getElementById('elapsed').textContent = `${h}:${m}:${s}`;
+}
+
+function renderCard(step) {
+  const st = getStatus(step);
+  const own = step.owner || 'TBD';
+  const timer = stepTimers[step.id];
+
+  // Determine button label and class based on status
+  let btnLabel = 'Mark Active';
+  let btnClass = 'action-btn';
+  if (st === 'pending') { btnLabel = 'Mark Active'; btnClass += ' status-pending'; }
+  else if (st === 'active') { btnLabel = 'Mark Complete'; }
+  else if (st === 'complete') { btnLabel = '✓ Complete'; btnClass += ' done'; }
+  else if (st === 'flagged') { btnLabel = '⚠ Flagged'; btnClass += ' status-flagged'; }
+  else if (st === 'blocked') { btnLabel = '✕ Blocked'; btnClass += ' status-blocked'; }
+
+  // Timer display
+  let timerHtml = '';
+  if (timer) {
+    if (timer.completedAt) {
+      timerHtml = `<div class="step-timer timer-complete">
+        <span class="step-timer-icon">●</span>
+        <span>Step time:</span>
+        <span class="step-timer-value">${formatDuration(timer.completedAt - timer.activatedAt)}</span>
+      </div>`;
+    } else {
+      timerHtml = `<div class="step-timer">
+        <span class="step-timer-icon">●</span>
+        <span>Active for:</span>
+        <span class="step-timer-value step-timer-live" data-step-id="${step.id}">${formatDuration(Date.now() - timer.activatedAt)}</span>
+      </div>`;
+    }
+  }
+
+  // Build flyout options — escalation order: undo (top) → blocked → flag (closest to cursor)
+  // Each option uses onpointerup for liftoff activation AND onclick as fallback for tap
+  let flyoutOptions = '';
+  if (st === 'complete' || st === 'flagged' || st === 'blocked') {
+    flyoutOptions += `<button class="flyout-option opt-undo"
+      onclick="event.stopPropagation();activateOption(event,'undo','${step.id}')"
+      onpointerup="event.stopPropagation();activateOption(event,'undo','${step.id}')"><div class="flyout-dot" style="background:var(--gray300)"></div>Undo</button>`;
+  }
+  if (st !== 'blocked' && st !== 'complete') {
+    flyoutOptions += `<button class="flyout-option opt-blocked"
+      onclick="event.stopPropagation();activateOption(event,'blocked','${step.id}')"
+      onpointerup="event.stopPropagation();activateOption(event,'blocked','${step.id}')"><div class="flyout-dot" style="background:var(--red)"></div>Blocked</button>`;
+  }
+  if (st !== 'flagged' && st !== 'complete') {
+    flyoutOptions += `<button class="flyout-option opt-flag"
+      onclick="event.stopPropagation();activateOption(event,'flag','${step.id}')"
+      onpointerup="event.stopPropagation();activateOption(event,'flag','${step.id}')"><div class="flyout-dot" style="background:var(--amber)"></div>Needs Attention</button>`;
+  }
+  if (st === 'active') {
+    flyoutOptions += `<button class="flyout-option opt-pending"
+      onclick="event.stopPropagation();activateOption(event,'pending','${step.id}')"
+      onpointerup="event.stopPropagation();activateOption(event,'pending','${step.id}')"><div class="flyout-dot" style="background:var(--gray500)"></div>Pending</button>`;
+  }
+  // Note form (hidden by default, shown when flag/blocked is tapped)
+  flyoutOptions += `<div class="flyout-note-form" id="note-form-${step.id}">
+    <div class="flyout-note-label" id="note-label-${step.id}"></div>
+    <textarea class="flyout-note-input" id="note-input-${step.id}" placeholder="What's going on? (required)" onclick="event.stopPropagation();" onpointerdown="event.stopPropagation();" onkeydown="event.stopPropagation();"></textarea>
+    <button class="flyout-note-submit" id="note-submit-${step.id}" onclick="event.stopPropagation();submitNote('${step.id}')" onpointerdown="event.stopPropagation();">Submit</button>
+  </div>`;
+
+  return `
+    <div class="step-card ${st}" id="card-${step.id}" onclick="toggleDetail('${step.id}')">
+      <div class="step-top">
+        <div>
+          <div class="seq-num">STEP ${step.seq}</div>
+          <div class="step-title">${step.title}</div>
+        </div>
+        <div class="step-status-icon ${st}">${statusIcon(st)}</div>
+      </div>
+      <div class="step-meta">
+        <div class="owner-badge">
+          <div class="avatar">${initials(own)}</div>
+          <span>${own}</span>
+        </div>
+        <span class="cat-tag">${step.cat}</span>
+        ${st==='flagged'?'<span class="flag-tag">⚠ Needs Attention</span>':''}
+        ${st==='blocked'?'<span class="flag-tag" style="color:var(--red);background:rgba(224,82,82,0.1);border-color:rgba(224,82,82,0.2)">✕ Blocked</span>':''}
+        ${step.note && step.note.includes('parallel')?'<span class="parallel-tag">⟂ Parallel</span>':''}
+      </div>
+      <div class="step-detail" id="detail-${step.id}">
+        <div class="detail-row"><span class="detail-label">Input</span><span class="detail-value">${step.input||'—'}</span></div>
+        <div class="detail-row"><span class="detail-label">Output</span><span class="detail-value">${step.output||'—'}</span></div>
+        <div class="detail-row"><span class="detail-label">Owner</span><span class="detail-value">${own}</span></div>
+        ${step.note && !step.note.startsWith('⚠') ? `<div class="detail-row"><span class="detail-label">Notes</span><span class="detail-value">${step.note}</span></div>`:''}
+        ${step.note && step.note.startsWith('⚠') ? `<div class="detail-note">${step.note}</div>`:''}
+        ${stepNotes[step.id] ? `<div class="detail-user-note note-${stepNotes[step.id].type}">
+          <div class="detail-user-note-label">${stepNotes[step.id].type === 'flag' ? '⚠ Flagged' : '✕ Blocked'} — User Note</div>
+          ${stepNotes[step.id].text}
+        </div>` : ''}
+        ${timerHtml}
+        <div class="action-wrap">
+          <div class="flyout" id="flyout-${step.id}">${flyoutOptions}</div>
+          <button class="${btnClass}" id="btn-${step.id}"
+            onclick="event.stopPropagation();"
+            onpointerdown="event.stopPropagation();startLongPress('${step.id}',this,event)"
+            onpointerup="event.stopPropagation();endLongPress('${step.id}',this,event)"
+            oncontextmenu="event.preventDefault();">
+            <div class="hold-fill"></div>
+            <span class="action-btn-label">${btnLabel}</span>
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Slack notification helper
+const SLACK_ENABLED = false; // Set to true when webhook is configured
+const SLACK_WEBHOOK_URL = ''; // Add your Slack webhook URL here
+
+// Map owners to Slack user IDs for @mentions (fill in real IDs)
+const SLACK_USER_MAP = {
+  'Ted': '',
+  'Charlie': '',
+  'Kyle Siehl': '',
+  'Kyle': '',
+  'Yogesh': '',
+  'Vahagn': '',
+  'Lakshay Bansal': '',
+  'Lakshay': '',
+  'Rick': '',
+  'Rick Paris': '',
+  'Buddy': '',
+  'Durga Raj': '',
+  'Wayne': '',
+  'Goutham': '',
+  'Mikey': '',
+  'Atharva': '',
+  'Rajesh': '',
+};
+
+async function sendSlackNotification(message, mentionOwner) {
+  if (!SLACK_ENABLED || !SLACK_WEBHOOK_URL) return;
+  // Build mention string if we have a Slack ID
+  let mention = '';
+  if (mentionOwner) {
+    const owners = mentionOwner.split(/[\/,&]+/).map(s=>s.trim());
+    mention = owners.map(o => {
+      const uid = SLACK_USER_MAP[o];
+      return uid ? `<@${uid}>` : o;
+    }).join(', ');
+  }
+  const text = mention ? `${mention} — ${message}` : message;
+  try {
+    await fetch(SLACK_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+  } catch(e) { console.warn('Slack notification failed:', e); }
+}
+
+function getPhaseStatus(phase) {
+  const phaseSteps = steps.filter(s => s.phase === phase);
+  const statuses = phaseSteps.map(s => getStatus(s));
+  const allComplete = statuses.every(s => s === 'complete');
+  const hasActive = statuses.some(s => s === 'active');
+  const hasAnyProgress = statuses.some(s => s === 'complete' || s === 'active');
+  const completeCount = statuses.filter(s => s === 'complete').length;
+  return { total: phaseSteps.length, complete: completeCount, allComplete, hasActive, hasAnyProgress };
+}
+
+// Short labels for phase progress pips
+const PHASE_SHORT_LABELS = {
+  'Pre-Event: Survey & Prep': 'Survey & Prep',
+  'Parallel Processing': 'Parallel Tracks',
+  'Convergence & Config': 'Convergence',
+  'Overlays & Final Tuning': 'Overlays',
+  'Post-Live Monitoring': 'Monitoring',
+};
+
+function renderPhaseProgress() {
+  const nav = document.getElementById('phase-progress');
+  const phases = [...new Set(steps.map(s=>s.phase))];
+
+  // Determine if all steps are complete (GO LIVE state)
+  const allDone = steps.every(s => getStatus(s) === 'complete');
+
+  let html = '';
+  phases.forEach((phase, i) => {
+    const info = getPhaseStatus(phase);
+    let pipClass = 'pip-pending';
+    let icon = '○';
+    if (info.allComplete) { pipClass = 'pip-complete'; icon = '✓'; }
+    else if (info.hasActive || info.hasAnyProgress) { pipClass = 'pip-active'; icon = '▶'; }
+
+    const shortLabel = PHASE_SHORT_LABELS[phase] || phase;
+
+    html += `<div class="phase-pip ${pipClass}" onclick="scrollToPhase(${i})" title="${phase}">
+      <div class="pip-icon">${icon}</div>
+      <span class="pip-label">${shortLabel}</span>
+      <span class="pip-fraction">${info.complete}/${info.total}</span>
+    </div>`;
+  });
+
+  // GO LIVE pip at the end
+  html += `<div class="phase-pip ${allDone ? 'pip-live' : 'pip-pending'}" title="Stream Live">
+    <div class="pip-icon">${allDone ? '⬤' : '○'}</div>
+    <span class="pip-label">${allDone ? 'LIVE' : 'Go Live'}</span>
+  </div>`;
+
+  nav.innerHTML = html;
+}
+
+function scrollToPhase(index) {
+  const sections = document.querySelectorAll('.phase-section');
+  if (sections[index]) {
+    sections[index].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function render() {
+  const app = document.getElementById('app');
+  const phases = [...new Set(steps.map(s=>s.phase))];
+  let html = '';
+
+  phases.forEach(phase => {
+    const phaseSteps = steps.filter(s=>s.phase===phase);
+    const trackIds = [...new Set(phaseSteps.map(s=>s.track))];
+    const hasParallel = trackIds.filter(t=>t!=='single'&&t!=='mon').length > 1;
+
+    html += `<div class="phase-section">
+      <div class="phase-header">
+        <span class="phase-label">${phase}</span>
+        <div class="phase-line"></div>
+        <span class="phase-count">${phaseSteps.length} steps</span>
+      </div>`;
+
+    if(hasParallel) {
+      const vpsSteps = phaseSteps.filter(s=>s.track==='vps');
+      const videoSteps = phaseSteps.filter(s=>s.track==='video');
+      const sportSteps = phaseSteps.filter(s=>s.track==='sport');
+
+      html += `<div class="tracks">
+        <div>
+          <div class="track-header track-vps">VPS Track</div>
+          ${vpsSteps.map(renderCard).join('')}
+        </div>
+        <div>
+          <div class="track-header track-video">Video Track</div>
+          ${videoSteps.map(renderCard).join('')}
+        </div>
+        <div>
+          <div class="track-header track-sport">Sport Data Track</div>
+          ${sportSteps.map(renderCard).join('')}
+        </div>
+      </div>`;
+
+      html += `<div class="converge"><div class="converge-line"></div><span>Tracks converge</span><div class="converge-line"></div></div>`;
+
+    } else if(phase === 'Post-Live Monitoring') {
+      html += `<div class="monitor-row">${phaseSteps.map(renderCard).join('')}</div>`;
+    } else {
+      html += phaseSteps.map(renderCard).join('');
+    }
+
+    html += `</div>`;
+  });
+
+  app.innerHTML = html;
+  renderPhaseProgress();
+  updateProgress();
+}
+
+render();
+</script>
+</body>
+</html>
