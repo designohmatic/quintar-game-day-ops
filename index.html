@@ -868,6 +868,85 @@
   .step-timer.timer-resolved .step-timer-icon { color: var(--green); }
   .step-timer.timer-resolved .step-timer-value { color: var(--green); }
 
+  /* STREAM LIVE BANNER */
+  .stream-live-banner {
+    background: linear-gradient(135deg, #0a1a0f 0%, #0d1f16 100%);
+    border: 1px solid rgba(61,190,122,0.4);
+    border-radius: 14px;
+    padding: 32px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    margin-top: 32px;
+    animation: banner-in 0.6s ease-out;
+  }
+
+  .stream-live-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(61,190,122,0.15) 0%, transparent 65%);
+  }
+
+  .stream-live-title {
+    font-family: 'Questrial', sans-serif;
+    font-size: 32px;
+    color: var(--green);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    position: relative;
+    text-shadow: 0 0 40px rgba(61,190,122,0.6);
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  .stream-live-sub {
+    font-size: 13px;
+    color: var(--gray300);
+    margin-top: 6px;
+    position: relative;
+    letter-spacing: 0.06em;
+  }
+
+  .stream-live-time {
+    font-size: 15px;
+    color: var(--white);
+    font-weight: 600;
+    margin-top: 12px;
+    position: relative;
+  }
+
+  .report-btn {
+    margin-top: 20px;
+    padding: 12px 28px;
+    border-radius: 8px;
+    border: 1px solid rgba(98,179,198,0.5);
+    background: rgba(98,179,198,0.1);
+    color: var(--blue);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .report-btn:hover {
+    background: rgba(98,179,198,0.2);
+    border-color: var(--blue);
+  }
+
+  @keyframes banner-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { text-shadow: 0 0 30px rgba(61,190,122,0.5); }
+    50% { text-shadow: 0 0 50px rgba(61,190,122,0.8), 0 0 80px rgba(61,190,122,0.3); }
+  }
+
   /* SEQ NUMBER */
   .seq-num {
     font-size: 10px;
@@ -1821,12 +1900,246 @@ function render() {
     html += `</div>`;
   });
 
+  // Stream Live banner when all steps complete
+  const allDone = steps.every(s => getStatus(s) === 'complete');
+  if (allDone) {
+    const elapsed = startTime ? formatDuration(Date.now() - startTime) : '—';
+    html += `<div class="stream-live-banner">
+      <div class="stream-live-title">Stream Is Live</div>
+      <div class="stream-live-sub">All game day ops steps complete</div>
+      <div class="stream-live-time">Total elapsed: ${elapsed}</div>
+      <button class="report-btn" onclick="openTimeReport()">Generate Time Report</button>
+    </div>`;
+  }
+
   app.innerHTML = html;
   renderPhaseProgress();
   updateProgress();
 }
 
 render();
+
+// ===== TIME REPORT =====
+
+function buildReportData() {
+  const rows = [];
+  const phases = [...new Set(steps.map(s => s.phase))];
+  phases.forEach(phase => {
+    steps.filter(s => s.phase === phase).forEach(step => {
+      const timer = stepTimers[step.id];
+      const issues = issueTimers[step.id] || [];
+      const activeDuration = timer ? (timer.completedAt || Date.now()) - timer.activatedAt : 0;
+      const totalIssueDuration = issues.reduce((sum, iss) => {
+        return sum + ((iss.resolvedAt || Date.now()) - iss.startedAt);
+      }, 0);
+      rows.push({
+        phase,
+        seq: step.seq,
+        title: step.title,
+        track: step.track,
+        cat: step.cat,
+        owner: step.owner || 'TBD',
+        status: getStatus(step),
+        activeDurationMs: activeDuration,
+        activeDuration: timer ? formatDuration(activeDuration) : '—',
+        issues: issues.map(iss => ({
+          type: iss.type,
+          durationMs: (iss.resolvedAt || Date.now()) - iss.startedAt,
+          duration: formatDuration((iss.resolvedAt || Date.now()) - iss.startedAt),
+          resolved: !!iss.resolvedAt,
+        })),
+        totalIssueDurationMs: totalIssueDuration,
+        totalIssueDuration: totalIssueDuration > 0 ? formatDuration(totalIssueDuration) : '—',
+        note: (stepNotes[step.id] && stepNotes[step.id].text) || '',
+      });
+    });
+  });
+  return rows;
+}
+
+function downloadCSV() {
+  const rows = buildReportData();
+  const headers = ['Phase','Seq','Step','Track','Category','Owner','Status','Step Duration','Issue Type','Issue Duration','Issue Resolved','Total Issue Time','Note'];
+  const csvRows = [headers.join(',')];
+
+  rows.forEach(r => {
+    if (r.issues.length === 0) {
+      csvRows.push([
+        `"${r.phase}"`, r.seq, `"${r.title}"`, r.track, `"${r.cat}"`,
+        `"${r.owner}"`, r.status, `"${r.activeDuration}"`,
+        '', '', '', `"${r.totalIssueDuration}"`, `"${r.note}"`
+      ].join(','));
+    } else {
+      r.issues.forEach((iss, i) => {
+        csvRows.push([
+          `"${r.phase}"`, r.seq, `"${r.title}"`, r.track, `"${r.cat}"`,
+          `"${r.owner}"`, r.status, i === 0 ? `"${r.activeDuration}"` : '',
+          iss.type, `"${iss.duration}"`, iss.resolved ? 'Yes' : 'No',
+          i === 0 ? `"${r.totalIssueDuration}"` : '', i === 0 ? `"${r.note}"` : ''
+        ].join(','));
+      });
+    }
+  });
+
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const dateStr = new Date().toISOString().slice(0, 10);
+  a.download = `quintar-ops-report-${dateStr}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function openTimeReport() {
+  const rows = buildReportData();
+  const elapsed = startTime ? formatDuration(Date.now() - startTime) : '—';
+  const totalSteps = rows.length;
+  const completedSteps = rows.filter(r => r.status === 'complete').length;
+  const flaggedSteps = rows.filter(r => r.issues.some(i => i.type === 'flag')).length;
+  const blockedSteps = rows.filter(r => r.issues.some(i => i.type === 'blocked')).length;
+  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+  // Group by phase
+  const phases = [...new Set(rows.map(r => r.phase))];
+
+  let phaseHtml = '';
+  phases.forEach(phase => {
+    const phaseRows = rows.filter(r => r.phase === phase);
+    const phaseComplete = phaseRows.filter(r => r.status === 'complete').length;
+    const phaseTotalTime = phaseRows.reduce((s, r) => s + r.activeDurationMs, 0);
+    const phaseTotalIssue = phaseRows.reduce((s, r) => s + r.totalIssueDurationMs, 0);
+
+    phaseHtml += `
+      <div style="margin-top:28px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="font-family:'Questrial',sans-serif;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:#62B3C6;">${phase}</div>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+          <div style="font-size:11px;color:#97999B;">${phaseComplete}/${phaseRows.length} complete</div>
+          ${phaseTotalTime > 0 ? `<div style="font-size:11px;color:#97999B;">Phase time: <span style="color:#fff;font-weight:600;">${formatDuration(phaseTotalTime)}</span></div>` : ''}
+          ${phaseTotalIssue > 0 ? `<div style="font-size:11px;color:#E8A838;">Issues: ${formatDuration(phaseTotalIssue)}</div>` : ''}
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.1);text-align:left;">
+              <th style="padding:6px 8px;color:#75787B;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">Step</th>
+              <th style="padding:6px 8px;color:#75787B;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">Owner</th>
+              <th style="padding:6px 8px;color:#75787B;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">Status</th>
+              <th style="padding:6px 8px;color:#75787B;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">Duration</th>
+              <th style="padding:6px 8px;color:#75787B;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;">Issues</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    phaseRows.forEach(r => {
+      const statusColor = r.status === 'complete' ? '#3DBE7A' : r.status === 'flagged' ? '#E8A838' : r.status === 'blocked' ? '#E05252' : '#53565A';
+      const statusLabel = r.status === 'complete' ? '✓ Complete' : r.status === 'flagged' ? '⚠ Flagged' : r.status === 'blocked' ? '✕ Blocked' : '○ Pending';
+
+      let issueCell = '—';
+      if (r.issues.length > 0) {
+        issueCell = r.issues.map(iss => {
+          const iColor = iss.type === 'flag' ? '#E8A838' : '#E05252';
+          const iLabel = iss.type === 'flag' ? 'Flagged' : 'Blocked';
+          const resolved = iss.resolved ? `<span style="color:#3DBE7A;"> → Resolved</span>` : `<span style="color:${iColor};"> (open)</span>`;
+          return `<div style="color:${iColor};margin:2px 0;">${iLabel}: ${iss.duration}${resolved}</div>`;
+        }).join('');
+      }
+
+      phaseHtml += `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+          <td style="padding:8px;color:#F2F2F2;"><span style="color:#53565A;font-size:10px;margin-right:4px;">${r.seq}</span> ${r.title}</td>
+          <td style="padding:8px;color:#C8C9C7;">${r.owner}</td>
+          <td style="padding:8px;color:${statusColor};font-weight:600;font-size:11px;">${statusLabel}</td>
+          <td style="padding:8px;color:#F2F2F2;font-weight:600;font-variant-numeric:tabular-nums;">${r.activeDuration}</td>
+          <td style="padding:8px;font-size:11px;">${issueCell}</td>
+        </tr>
+      `;
+    });
+
+    phaseHtml += `</tbody></table></div>`;
+  });
+
+  const reportHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quintar Ops Time Report — ${dateStr}</title>
+<link href="https://fonts.googleapis.com/css2?family=Questrial&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0b0d;
+    color: #F2F2F2;
+    font-family: 'IBM Plex Sans', sans-serif;
+    padding: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  @media print {
+    body { background: #000; padding: 12px; font-size: 10px; }
+    .no-print { display: none !important; }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    body { padding: 12px; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 4px !important; }
+  }
+</style>
+</head>
+<body>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+    <div>
+      <div style="font-family:'Questrial',sans-serif;font-size:22px;color:#fff;letter-spacing:0.04em;">QUINTAR<span style="color:#62B3C6;">.</span> Time Report</div>
+      <div style="font-size:12px;color:#97999B;margin-top:4px;">${dateStr} at ${timeStr}</div>
+    </div>
+    <div class="no-print" style="display:flex;gap:10px;">
+      <button onclick="window.print()" style="padding:8px 20px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#F2F2F2;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.04em;">Print / Save PDF</button>
+      <button id="csv-btn" style="padding:8px 20px;border-radius:6px;border:1px solid rgba(98,179,198,0.5);background:rgba(98,179,198,0.1);color:#62B3C6;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.04em;">Download CSV</button>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:8px;">
+    <div style="background:#111316;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:24px;font-weight:600;color:#3DBE7A;">${completedSteps}/${totalSteps}</div>
+      <div style="font-size:10px;color:#97999B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Steps Complete</div>
+    </div>
+    <div style="background:#111316;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:24px;font-weight:600;color:#fff;">${elapsed}</div>
+      <div style="font-size:10px;color:#97999B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Total Elapsed</div>
+    </div>
+    <div style="background:#111316;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:24px;font-weight:600;color:#E8A838;">${flaggedSteps}</div>
+      <div style="font-size:10px;color:#97999B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Steps Flagged</div>
+    </div>
+    <div style="background:#111316;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:24px;font-weight:600;color:#E05252;">${blockedSteps}</div>
+      <div style="font-size:10px;color:#97999B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Steps Blocked</div>
+    </div>
+  </div>
+
+  ${phaseHtml}
+
+  <div style="margin-top:32px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);font-size:10px;color:#53565A;text-align:center;letter-spacing:0.06em;">
+    QUINTAR GAME DAY OPS — GENERATED ${new Date().toISOString()}
+  </div>
+
+<script>
+  document.getElementById('csv-btn').addEventListener('click', function() {
+    window.opener.downloadCSV();
+  });
+</script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(reportHtml);
+  w.document.close();
+}
 </script>
 </body>
 </html>
