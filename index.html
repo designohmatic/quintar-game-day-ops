@@ -1005,10 +1005,10 @@
 <script>
 const steps = [
   // ── PHASE 1: SURVEY PREP ──
-  { id:'s1', phase:'Pre-Event: Survey & Prep', track:'vps', seq:1, title:'Survey Preparations', cat:'Survey Prep', input:'Goals of event', output:'Site plan', owner:'Ted', note:null, status:'complete', pct:95 },
-  { id:'s2', phase:'Pre-Event: Survey & Prep', track:'vps', seq:2, title:'Survey App Download (iOS)', cat:'Survey', input:'Site plan', output:'Verified Survey App', owner:'Durga Raj / Ted', note:'P1 — Portal with authentication & authorization', status:'complete', pct:null },
-  { id:'s3', phase:'Pre-Event: Survey & Prep', track:'vps', seq:3, title:'Survey Location', cat:'Survey', input:'Survey App & Site plan', output:'Survey files @ venue', owner:'Ted', note:'P1 — Training Doc + App + Auth (TestFlight)', status:'complete', pct:null },
-  { id:'s4', phase:'Pre-Event: Survey & Prep', track:'vps', seq:4, title:'Survey File Upload & Management', cat:'Survey', input:'Survey files @ venue', output:'Survey files @ cloud', owner:'Yogesh / Durga Raj', note:'Portal or Google Drive?', status:'active', pct:null },
+  { id:'s1', phase:'Pre-Event: Survey & Prep', track:'vps', seq:1, title:'Survey Preparations', cat:'Survey Prep', input:'Goals of event', output:'Site plan', owner:'Ted', note:null, status:'pending', pct:95 },
+  { id:'s2', phase:'Pre-Event: Survey & Prep', track:'vps', seq:2, title:'Survey App Download (iOS)', cat:'Survey', input:'Site plan', output:'Verified Survey App', owner:'Durga Raj / Ted', note:'P1 — Portal with authentication & authorization', status:'pending', pct:null },
+  { id:'s3', phase:'Pre-Event: Survey & Prep', track:'vps', seq:3, title:'Survey Location', cat:'Survey', input:'Survey App & Site plan', output:'Survey files @ venue', owner:'Ted', note:'P1 — Training Doc + App + Auth (TestFlight)', status:'pending', pct:null },
+  { id:'s4', phase:'Pre-Event: Survey & Prep', track:'vps', seq:4, title:'Survey File Upload & Management', cat:'Survey', input:'Survey files @ venue', output:'Survey files @ cloud', owner:'Yogesh / Durga Raj', note:'Portal or Google Drive?', status:'pending', pct:null },
   { id:'s5', phase:'Pre-Event: Survey & Prep', track:'vps', seq:5, title:'Survey App User Training & Tutorials', cat:'Survey', input:'—', output:'Trained user', owner:'Ted', note:'Portal or First-time user experience (FTUE)', status:'pending', pct:null },
 
   // ── PHASE 2: PARALLEL TRACKS ──
@@ -1030,7 +1030,7 @@ const steps = [
   { id:'vid8', phase:'Parallel Processing', track:'video', seq:13, title:'Configure & Apply Rectification Params', cat:'Config', input:'Rectification data', output:'Video pipeline with rectified video', owner:'Kyle / Yogesh', note:null, status:'pending', pct:null },
   { id:'vid9', phase:'Parallel Processing', track:'video', seq:14, title:'Sync Videos', cat:'Configure', input:'Rectified streams', output:'Synced videos', owner:'Kyle / Yogesh', note:null, status:'pending', pct:null },
   { id:'vid10', phase:'Parallel Processing', track:'video', seq:15, title:'Cloud Video Processing', cat:'Pipeline', input:'Stereo feed + rect data + hard mask', output:'Stereo video served', owner:'Kyle Siehl', note:null, status:'pending', pct:null },
-  { id:'vid11', phase:'Parallel Processing', track:'video', seq:16, title:'Tune Video Ladders', cat:'Pipeline', input:'Stereo video served', output:'Optimized video', owner:'Kyle Siehl', note:'⚠ We don\'t have this yet — We need it', status:'flagged', pct:null },
+  { id:'vid11', phase:'Parallel Processing', track:'video', seq:16, title:'Tune Video Ladders', cat:'Pipeline', input:'Stereo video served', output:'Optimized video', owner:'Kyle Siehl', note:'⚠ We don\'t have this yet — We need it', status:'pending', pct:null },
   { id:'vid12', phase:'Parallel Processing', track:'video', seq:17, title:'Configure — Static Mask', cat:'Config', input:'Stereo video served', output:'Stereo video ready', owner:'Kyle / Yogesh', note:null, status:'pending', pct:null },
   { id:'vid13', phase:'Parallel Processing', track:'video', seq:18, title:'Configure — Video Streaming URLs', cat:'Config', input:'Stereo video served', output:'Stereo video ready', owner:'Yogesh', note:null, status:'pending', pct:null },
   { id:'vid14', phase:'Parallel Processing', track:'video', seq:19, title:'Check Video Pipeline Output on HMD', cat:'Test', input:'Stereo video ready', output:'Stereo video approved', owner:'Charlie', note:null, status:'pending', pct:null },
@@ -1045,18 +1045,18 @@ const steps = [
   { id:'e1', phase:'Convergence & Config', track:'single', seq:'—', title:'Event Setup (Sport, GameID, Location, Teams)', cat:'Pipeline', input:'Event info from League/Team/Sport', output:'Event set up complete', owner:'Yogesh', note:null, status:'pending', pct:null },
   { id:'e2', phase:'Convergence & Config', track:'single', seq:'—', title:'Infra Provisioning (Registration, Sport Data, S3, Region)', cat:'Pipeline', input:'VPS model', output:'Endpoints in config', owner:'Vahagn / Rajesh', note:null, status:'pending', pct:null },
   { id:'e3', phase:'Convergence & Config', track:'single', seq:'—', title:'Adjust Sport Data Timing Sync to Video', cat:'Config Tuning', input:'Stereo video ready + sport data ready', output:'Sport & video in sync', owner:'Lakshay / Buddy / Charlie', note:null, status:'pending', pct:null },
-  { id:'e4', phase:'Convergence & Config', track:'single', seq:'—', title:'Configure — Frame Segments', cat:'Config', input:'—', output:'—', owner:'Charlie', note:'⚠ We don\'t know who the target user is', status:'flagged', pct:null },
+  { id:'e4', phase:'Convergence & Config', track:'single', seq:'—', title:'Configure — Frame Segments', cat:'Config', input:'—', output:'—', owner:'Charlie', note:'⚠ We don\'t know who the target user is', status:'pending', pct:null },
   { id:'e5', phase:'Convergence & Config', track:'single', seq:'—', title:'Configure — Scale Factor', cat:'Config', input:'Stereo video', output:'Correct spatial placement', owner:'Charlie', note:null, status:'pending', pct:null },
   { id:'e6', phase:'Convergence & Config', track:'single', seq:'—', title:'Monitoring — Sport Data', cat:'Monitoring', input:'—', output:'Report if issues', owner:'Buddy / Charlie', note:null, status:'pending', pct:null },
 
   // ── PHASE 4: OVERLAYS ──
-  { id:'o1', phase:'Overlays & Final Tuning', track:'single', seq:'—', title:'Configure — Overlays', cat:'Config Tuning', input:'Stereo video approved', output:'Overlays render OK', owner:'Charlie / Mikey / Goutham / Atharva', note:'⚠ We need more information here', status:'flagged', pct:null },
+  { id:'o1', phase:'Overlays & Final Tuning', track:'single', seq:'—', title:'Configure — Overlays', cat:'Config Tuning', input:'Stereo video approved', output:'Overlays render OK', owner:'Charlie / Mikey / Goutham / Atharva', note:'⚠ We need more information here', status:'pending', pct:null },
   { id:'o2', phase:'Overlays & Final Tuning', track:'single', seq:'—', title:'Configure — FOP UI Adjustment (fix large disparity)', cat:'Config Tuning', input:'Overlays render OK', output:'Overlays placed OK', owner:'Charlie', note:null, status:'pending', pct:null },
   { id:'o3', phase:'Overlays & Final Tuning', track:'single', seq:'—', title:'Tune Stereo Disparity (calibration rings on field)', cat:'Config Tuning', input:'Overlays placed OK', output:'Overlays placement polished', owner:'Charlie', note:null, status:'pending', pct:null },
   { id:'o4', phase:'Overlays & Final Tuning', track:'single', seq:'—', title:'Check Data Overlays & Sport Data Sync', cat:'Test', input:'Overlays placement polished', output:'Spatial stream approved', owner:'Buddy / Charlie', note:null, status:'pending', pct:null },
 
   // ── MONITORING ──
-  { id:'m1', phase:'Post-Live Monitoring', track:'mon', seq:'—', title:'Monitoring — Video Stream', cat:'Monitoring', input:'—', output:'Report if issues', owner:'TBD', note:'⚠ We don\'t have this yet — We need it', status:'flagged', pct:null },
+  { id:'m1', phase:'Post-Live Monitoring', track:'mon', seq:'—', title:'Monitoring — Video Stream', cat:'Monitoring', input:'—', output:'Report if issues', owner:'TBD', note:'⚠ We don\'t have this yet — We need it', status:'pending', pct:null },
   { id:'m2', phase:'Post-Live Monitoring', track:'mon', seq:'—', title:'Monitoring — Sport Data (Live)', cat:'Monitoring', input:'—', output:'Report if issues', owner:'Buddy / Charlie', note:null, status:'pending', pct:null },
 ];
 
