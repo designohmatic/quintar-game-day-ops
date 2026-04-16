@@ -704,6 +704,7 @@
 
   .flyout-option.opt-flag { color: var(--amber); }
   .flyout-option.opt-blocked { color: var(--red); }
+  .flyout-option.opt-resolve { color: var(--green); }
   .flyout-option.opt-undo { color: var(--gray300); }
   .flyout-option.opt-pending { color: var(--gray300); }
 
@@ -846,6 +847,27 @@
   .step-timer.timer-complete .step-timer-icon { color: var(--green); }
   .step-timer.timer-complete .step-timer-value { color: var(--green); }
 
+  .step-timer.timer-flag {
+    background: rgba(232,168,56,0.06);
+    border-color: rgba(232,168,56,0.12);
+  }
+  .step-timer.timer-flag .step-timer-icon { color: var(--amber); }
+  .step-timer.timer-flag .step-timer-value { color: var(--amber); }
+
+  .step-timer.timer-blocked {
+    background: rgba(224,82,82,0.06);
+    border-color: rgba(224,82,82,0.12);
+  }
+  .step-timer.timer-blocked .step-timer-icon { color: var(--red); }
+  .step-timer.timer-blocked .step-timer-value { color: var(--red); }
+
+  .step-timer.timer-resolved {
+    background: rgba(61,190,122,0.04);
+    border-color: rgba(61,190,122,0.10);
+  }
+  .step-timer.timer-resolved .step-timer-icon { color: var(--green); }
+  .step-timer.timer-resolved .step-timer-value { color: var(--green); }
+
   /* SEQ NUMBER */
   .seq-num {
     font-size: 10px;
@@ -973,6 +995,9 @@ const activationChain = {};
 // Per-step user notes: { stepId: { type: 'flag'|'blocked', text: 'reason' } }
 const stepNotes = {};
 
+// Per-step issue timing: { stepId: [{ type: 'flag'|'blocked', startedAt: timestamp, resolvedAt: timestamp|null }] }
+const issueTimers = {};
+
 // Flyout state
 let activeFlyout = null;
 let longPressTimer = null;
@@ -992,6 +1017,16 @@ setInterval(() => {
     const timer = stepTimers[id];
     if (timer && !timer.completedAt) {
       el.textContent = formatDuration(Date.now() - timer.activatedAt);
+    }
+  });
+  document.querySelectorAll('.issue-timer-live').forEach(el => {
+    const id = el.dataset.stepId;
+    const timers = issueTimers[id];
+    if (timers) {
+      const active = timers.find(t => !t.resolvedAt);
+      if (active) {
+        el.textContent = formatDuration(Date.now() - active.startedAt);
+      }
     }
   });
 }, 1000);
@@ -1122,6 +1157,8 @@ function endLongPress(id, btn, e) {
       activateStep(id);
     } else if (st === 'active') {
       checkStep(id);
+    } else if (st === 'flagged' || st === 'blocked') {
+      openFlyout(id);
     }
   }
 }
@@ -1147,7 +1184,9 @@ function activateOption(e, action, id) {
   suppressToggleUntil = now + 500;
   suppressCloseUntil = now + 500;
 
-  if (action === 'undo') {
+  if (action === 'resolve') {
+    resolveStep(id);
+  } else if (action === 'undo') {
     undoStep(id);
   } else if (action === 'flag') {
     showNoteForm(id, 'flag');
@@ -1253,6 +1292,10 @@ function flagStep(id, noteText) {
   delete checked[id];
   step.status = 'flagged';
 
+  // Record issue start time
+  if (!issueTimers[id]) issueTimers[id] = [];
+  issueTimers[id].push({ type: 'flag', startedAt: Date.now(), resolvedAt: null });
+
   const reason = noteText || (stepNotes[id] && stepNotes[id].text) || '';
   sendSlackNotification(
     `"${step.title}" has been flagged — needs attention.${reason ? ' Reason: ' + reason : ''}`,
@@ -1272,6 +1315,10 @@ function blockStep(id, noteText) {
 
   delete checked[id];
   step.status = 'blocked';
+
+  // Record issue start time
+  if (!issueTimers[id]) issueTimers[id] = [];
+  issueTimers[id].push({ type: 'blocked', startedAt: Date.now(), resolvedAt: null });
 
   const reason = noteText || (stepNotes[id] && stepNotes[id].text) || '';
   sendSlackNotification(
@@ -1293,6 +1340,13 @@ function undoStep(id) {
   step.status = 'active';
   delete stepTimers[id];
   stepTimers[id] = { activatedAt: Date.now(), completedAt: null };
+
+  // Remove the last issue timer (the one being undone — it was a mistake)
+  if (issueTimers[id] && issueTimers[id].length > 0) {
+    const last = issueTimers[id][issueTimers[id].length - 1];
+    if (!last.resolvedAt) issueTimers[id].pop();
+    if (issueTimers[id].length === 0) delete issueTimers[id];
+  }
 
   // Revert downstream steps that were auto-activated by this step
   if (activationChain[id]) {
@@ -1381,6 +1435,47 @@ function advanceNextStep(id) {
   return activated;
 }
 
+// Resolve a flagged/blocked step — records issue duration and marks complete
+function resolveStep(id) {
+  closeFlyouts();
+  const step = steps.find(s => s.id === id);
+  if (!step) return;
+
+  // Close out the active issue timer
+  if (issueTimers[id]) {
+    const active = issueTimers[id].find(t => !t.resolvedAt);
+    if (active) active.resolvedAt = Date.now();
+  }
+
+  // Mark complete
+  checked[id] = true;
+  if (!startTime) {
+    startTime = Date.now();
+    timerInt = setInterval(updateTimer, 1000);
+  }
+
+  // Record step completion time
+  if (stepTimers[id]) {
+    stepTimers[id].completedAt = Date.now();
+  }
+
+  sendSlackNotification(
+    `"${step.title}" has been resolved and marked complete.`,
+    step.owner
+  );
+
+  // Auto-advance the chain
+  advanceNextStep(id);
+
+  // Check if all steps are done — GO LIVE
+  const allDone = steps.every(s => getStatus(s) === 'complete');
+  if (allDone) {
+    sendSlackNotification('ALL SYSTEMS GO — STREAM IS LIVE! All game day ops steps complete.');
+  }
+
+  render();
+}
+
 // Manually activate a pending step — starts its timer
 function activateStep(id) {
   const step = steps.find(s => s.id === id);
@@ -1451,46 +1546,72 @@ function renderCard(step) {
   if (st === 'pending') { btnLabel = 'Mark Active'; btnClass += ' status-pending'; }
   else if (st === 'active') { btnLabel = 'Mark Complete'; }
   else if (st === 'complete') { btnLabel = '✓ Complete'; btnClass += ' done'; }
-  else if (st === 'flagged') { btnLabel = '⚠ Flagged'; btnClass += ' status-flagged'; }
-  else if (st === 'blocked') { btnLabel = '✕ Blocked'; btnClass += ' status-blocked'; }
+  else if (st === 'flagged') { btnLabel = '⚠ Flagged — Tap to Resolve'; btnClass += ' status-flagged'; }
+  else if (st === 'blocked') { btnLabel = '✕ Blocked — Tap to Resolve'; btnClass += ' status-blocked'; }
 
-  // Timer display
+  // Timer display — step time + issue times
   let timerHtml = '';
   if (timer) {
     if (timer.completedAt) {
-      timerHtml = `<div class="step-timer timer-complete">
+      timerHtml += `<div class="step-timer timer-complete">
         <span class="step-timer-icon">●</span>
         <span>Step time:</span>
         <span class="step-timer-value">${formatDuration(timer.completedAt - timer.activatedAt)}</span>
       </div>`;
     } else {
-      timerHtml = `<div class="step-timer">
+      timerHtml += `<div class="step-timer">
         <span class="step-timer-icon">●</span>
         <span>Active for:</span>
         <span class="step-timer-value step-timer-live" data-step-id="${step.id}">${formatDuration(Date.now() - timer.activatedAt)}</span>
       </div>`;
     }
   }
+  // Issue timers (flag/blocked durations)
+  if (issueTimers[step.id]) {
+    issueTimers[step.id].forEach((issue, idx) => {
+      const label = issue.type === 'flag' ? 'Flagged' : 'Blocked';
+      if (issue.resolvedAt) {
+        timerHtml += `<div class="step-timer timer-resolved">
+          <span class="step-timer-icon">●</span>
+          <span>${label} → Resolved:</span>
+          <span class="step-timer-value">${formatDuration(issue.resolvedAt - issue.startedAt)}</span>
+        </div>`;
+      } else {
+        const timerClass = issue.type === 'flag' ? 'timer-flag' : 'timer-blocked';
+        timerHtml += `<div class="step-timer ${timerClass}">
+          <span class="step-timer-icon">●</span>
+          <span>${label} for:</span>
+          <span class="step-timer-value issue-timer-live" data-step-id="${step.id}">${formatDuration(Date.now() - issue.startedAt)}</span>
+        </div>`;
+      }
+    });
+  }
 
-  // Build flyout options — escalation order: undo (top) → blocked → flag (closest to cursor)
-  // Each option uses onpointerup for liftoff activation AND onclick as fallback for tap
+  // Build flyout options
+  // Flagged/blocked: Resolved (primary) + Undo (mistake)
+  // Active: escalation ladder
+  // Complete: Undo only
   let flyoutOptions = '';
-  if (st === 'complete' || st === 'flagged' || st === 'blocked') {
+  if (st === 'flagged' || st === 'blocked') {
+    flyoutOptions += `<button class="flyout-option opt-resolve"
+      onclick="event.stopPropagation();activateOption(event,'resolve','${step.id}')"
+      onpointerup="event.stopPropagation();activateOption(event,'resolve','${step.id}')"><div class="flyout-dot" style="background:var(--green)"></div>Resolved</button>`;
     flyoutOptions += `<button class="flyout-option opt-undo"
       onclick="event.stopPropagation();activateOption(event,'undo','${step.id}')"
       onpointerup="event.stopPropagation();activateOption(event,'undo','${step.id}')"><div class="flyout-dot" style="background:var(--gray300)"></div>Undo</button>`;
   }
-  if (st !== 'blocked' && st !== 'complete') {
+  if (st === 'complete') {
+    flyoutOptions += `<button class="flyout-option opt-undo"
+      onclick="event.stopPropagation();activateOption(event,'undo','${step.id}')"
+      onpointerup="event.stopPropagation();activateOption(event,'undo','${step.id}')"><div class="flyout-dot" style="background:var(--gray300)"></div>Undo</button>`;
+  }
+  if (st === 'active') {
     flyoutOptions += `<button class="flyout-option opt-blocked"
       onclick="event.stopPropagation();activateOption(event,'blocked','${step.id}')"
       onpointerup="event.stopPropagation();activateOption(event,'blocked','${step.id}')"><div class="flyout-dot" style="background:var(--red)"></div>Blocked</button>`;
-  }
-  if (st !== 'flagged' && st !== 'complete') {
     flyoutOptions += `<button class="flyout-option opt-flag"
       onclick="event.stopPropagation();activateOption(event,'flag','${step.id}')"
       onpointerup="event.stopPropagation();activateOption(event,'flag','${step.id}')"><div class="flyout-dot" style="background:var(--amber)"></div>Needs Attention</button>`;
-  }
-  if (st === 'active') {
     flyoutOptions += `<button class="flyout-option opt-pending"
       onclick="event.stopPropagation();activateOption(event,'pending','${step.id}')"
       onpointerup="event.stopPropagation();activateOption(event,'pending','${step.id}')"><div class="flyout-dot" style="background:var(--gray500)"></div>Pending</button>`;
