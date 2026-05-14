@@ -1,0 +1,552 @@
+{
+  "version": 1,
+  "description": "Canonical 40-step Quintar Game Day Ops template. Owner names match roster.json exactly so Slack DM routing works. Specials: 'Operations Team' is a group, 'TBD' is a placeholder — neither receives DMs as a person.",
+  "phases": [
+    {
+      "phase": "Pre-Event: Survey & Prep",
+      "trackKey": "vps",
+      "steps": [
+        {
+          "stepId": "s1",
+          "seq": 1,
+          "name": "Survey Preparations",
+          "owners": [
+            "Ted Chen"
+          ],
+          "cat": "Survey Prep",
+          "input": "Goals of event",
+          "output": "Site plan",
+          "note": null
+        },
+        {
+          "stepId": "s2",
+          "seq": 2,
+          "name": "Survey App Download (iOS)",
+          "owners": [
+            "Durga Raj Mathur",
+            "Ted Chen"
+          ],
+          "cat": "Survey",
+          "input": "Site plan",
+          "output": "Verified Survey App",
+          "note": "P1 — Portal with authentication & authorization"
+        },
+        {
+          "stepId": "s3",
+          "seq": 3,
+          "name": "Survey Location",
+          "owners": [
+            "Ted Chen"
+          ],
+          "cat": "Survey",
+          "input": "Survey App & Site plan",
+          "output": "Survey files @ venue",
+          "note": "P1 — Training Doc + App + Auth (TestFlight)"
+        },
+        {
+          "stepId": "s4",
+          "seq": 4,
+          "name": "Survey File Upload & Management",
+          "owners": [
+            "Yogeshwara Krishnan",
+            "Durga Raj Mathur"
+          ],
+          "cat": "Survey",
+          "input": "Survey files @ venue",
+          "output": "Survey files @ cloud",
+          "note": "Portal or Google Drive?"
+        },
+        {
+          "stepId": "s5",
+          "seq": 5,
+          "name": "Survey App User Training & Tutorials",
+          "owners": [
+            "Ted Chen"
+          ],
+          "cat": "Survey",
+          "input": "—",
+          "output": "Trained user",
+          "note": "Portal or First-time user experience (FTUE)"
+        }
+      ]
+    },
+    {
+      "phase": "Parallel Processing — VPS",
+      "prefix": "VPS",
+      "trackKey": "vps",
+      "steps": [
+        {
+          "stepId": "v1",
+          "seq": 6,
+          "name": "RegAR Control Tool — Model Building",
+          "owners": [
+            "Yogeshwara Krishnan",
+            "Rick Paris"
+          ],
+          "cat": "Reg Model Ops",
+          "input": "Survey files @ cloud",
+          "output": "VPS model",
+          "note": null
+        },
+        {
+          "stepId": "v2",
+          "seq": 7,
+          "name": "Configuration — Reg Server",
+          "owners": [
+            "Rick Paris",
+            "Vahagn"
+          ],
+          "cat": "Config",
+          "input": "VPS model",
+          "output": "VPS model live",
+          "note": "Can happen in parallel"
+        },
+        {
+          "stepId": "v3",
+          "seq": 8,
+          "name": "Test VPS Registration Around Venue",
+          "owners": [
+            "Buddy Scott"
+          ],
+          "cat": "VPS Quality",
+          "input": "VPS model live",
+          "output": "VPS quality feedback",
+          "note": null
+        },
+        {
+          "stepId": "v4",
+          "seq": 9,
+          "name": "Fill Survey Gaps",
+          "owners": [
+            "Operations Team"
+          ],
+          "cat": "VPS Quality",
+          "input": "VPS quality feedback",
+          "output": "Additional survey files",
+          "note": null
+        },
+        {
+          "stepId": "v5",
+          "seq": 10,
+          "name": "VPS Model Rebuild",
+          "owners": [
+            "Rick Paris"
+          ],
+          "cat": "VPS Quality",
+          "input": "Survey files + fill-in",
+          "output": "VPS model v2",
+          "note": null
+        }
+      ]
+    },
+    {
+      "phase": "Parallel Processing — Video",
+      "prefix": "VID",
+      "trackKey": "video",
+      "steps": [
+        {
+          "stepId": "vid1",
+          "seq": 6,
+          "name": "Camera Setup — Stereo Separation & Zoom",
+          "owners": [
+            "Operations Team"
+          ],
+          "cat": "Venue",
+          "input": "Initial camera placement",
+          "output": "Camera positioned",
+          "note": null
+        },
+        {
+          "stepId": "vid2",
+          "seq": 7,
+          "name": "Connect Video Pipeline & Verify Streams",
+          "owners": [
+            "Operations Team"
+          ],
+          "cat": "Venue",
+          "input": "Connection info / IP address",
+          "output": "Video feeds live",
+          "note": null
+        },
+        {
+          "stepId": "vid3",
+          "seq": 8,
+          "name": "Adjust Spatial Stream Camera Stereo Alignment",
+          "owners": [
+            "Operations Team"
+          ],
+          "cat": "Venue",
+          "input": "Video feeds",
+          "output": "Stereo video feeds",
+          "note": "Kyle building optimization tool"
+        },
+        {
+          "stepId": "vid4",
+          "seq": 9,
+          "name": "Stereo Single Frame",
+          "owners": [
+            "Kyle Siehl"
+          ],
+          "cat": "Pipeline",
+          "input": "Stereo video feeds",
+          "output": "Stereo frame",
+          "note": null
+        },
+        {
+          "stepId": "vid5",
+          "seq": 10,
+          "name": "Stereo Single Frame Rectification",
+          "owners": [
+            "Wayne Cochran",
+            "Rick Paris",
+            "Yogeshwara Krishnan"
+          ],
+          "cat": "Pipeline",
+          "input": "Stereo frame",
+          "output": "Stereo rectification data",
+          "note": "Wayne working on a tool"
+        },
+        {
+          "stepId": "vid6",
+          "seq": 11,
+          "name": "Create Stereo Hard Mask",
+          "owners": [
+            "Charlie Johnson",
+            "Kyle Siehl"
+          ],
+          "cat": "Pipeline",
+          "input": "PNG monochrome",
+          "output": "PNG B&W 1-bit mask",
+          "note": null
+        },
+        {
+          "stepId": "vid7",
+          "seq": 12,
+          "name": "Create Stereo Static Mask",
+          "owners": [
+            "Charlie Johnson"
+          ],
+          "cat": "Pipeline",
+          "input": "Stereo rectified frames",
+          "output": "PNG monochrome",
+          "note": null
+        },
+        {
+          "stepId": "vid8",
+          "seq": 13,
+          "name": "Configure & Apply Rectification Params",
+          "owners": [
+            "Kyle Siehl",
+            "Yogeshwara Krishnan"
+          ],
+          "cat": "Config",
+          "input": "Rectification data",
+          "output": "Video pipeline with rectified video",
+          "note": null
+        },
+        {
+          "stepId": "vid9",
+          "seq": 14,
+          "name": "Sync Videos",
+          "owners": [
+            "Kyle Siehl",
+            "Yogeshwara Krishnan"
+          ],
+          "cat": "Configure",
+          "input": "Rectified streams",
+          "output": "Synced videos",
+          "note": null
+        },
+        {
+          "stepId": "vid10",
+          "seq": 15,
+          "name": "Cloud Video Processing",
+          "owners": [
+            "Kyle Siehl"
+          ],
+          "cat": "Pipeline",
+          "input": "Stereo feed + rect data + hard mask",
+          "output": "Stereo video served",
+          "note": null
+        },
+        {
+          "stepId": "vid11",
+          "seq": 16,
+          "name": "Tune Video Ladders",
+          "owners": [
+            "Kyle Siehl"
+          ],
+          "cat": "Pipeline",
+          "input": "Stereo video served",
+          "output": "Optimized video",
+          "note": "⚠ We don't have this yet — We need it"
+        },
+        {
+          "stepId": "vid12",
+          "seq": 17,
+          "name": "Configure — Static Mask",
+          "owners": [
+            "Kyle Siehl",
+            "Yogeshwara Krishnan"
+          ],
+          "cat": "Config",
+          "input": "Stereo video served",
+          "output": "Stereo video ready",
+          "note": null
+        },
+        {
+          "stepId": "vid13",
+          "seq": 18,
+          "name": "Configure — Video Streaming URLs",
+          "owners": [
+            "Yogeshwara Krishnan"
+          ],
+          "cat": "Config",
+          "input": "Stereo video served",
+          "output": "Stereo video ready",
+          "note": null
+        },
+        {
+          "stepId": "vid14",
+          "seq": 19,
+          "name": "Check Video Pipeline Output on HMD",
+          "owners": [
+            "Charlie Johnson"
+          ],
+          "cat": "Test",
+          "input": "Stereo video ready",
+          "output": "Stereo video approved",
+          "note": null
+        },
+        {
+          "stepId": "vid15",
+          "seq": 20,
+          "name": "Check Video Mask",
+          "owners": [
+            "Charlie Johnson",
+            "Buddy Scott"
+          ],
+          "cat": "Test",
+          "input": "Stereo video ready",
+          "output": "Stereo video approved",
+          "note": null
+        }
+      ]
+    },
+    {
+      "phase": "Parallel Processing — Sport Data",
+      "prefix": "SD",
+      "trackKey": "sport",
+      "steps": [
+        {
+          "stepId": "sd1",
+          "seq": 6,
+          "name": "Configuration — Sport Data Setup",
+          "owners": [
+            "Lakshay Bansal"
+          ],
+          "cat": "Config",
+          "input": "—",
+          "output": "Sport data configured",
+          "note": null
+        },
+        {
+          "stepId": "sd2",
+          "seq": 7,
+          "name": "Sport Data Ingest & Serve",
+          "owners": [
+            "Lakshay Bansal",
+            "Goutham Anugunti"
+          ],
+          "cat": "Sport Data",
+          "input": "Sport data source",
+          "output": "Sport data served",
+          "note": "Done prior to pipeline — not part of live pipeline"
+        },
+        {
+          "stepId": "sd3",
+          "seq": 8,
+          "name": "Configure — Sport Data",
+          "owners": [
+            "Lakshay Bansal"
+          ],
+          "cat": "Config",
+          "input": "Sport data served",
+          "output": "Sport data ready",
+          "note": null
+        }
+      ]
+    },
+    {
+      "phase": "Convergence & Config",
+      "trackKey": "single",
+      "steps": [
+        {
+          "stepId": "e1",
+          "seq": 21,
+          "name": "Event Setup (Sport, GameID, Location, Teams)",
+          "owners": [
+            "Yogeshwara Krishnan"
+          ],
+          "cat": "Pipeline",
+          "input": "Event info from League/Team/Sport",
+          "output": "Event set up complete",
+          "note": null
+        },
+        {
+          "stepId": "e2",
+          "seq": 22,
+          "name": "Infra Provisioning (Reg, Sport Data, S3, Region)",
+          "owners": [
+            "Vahagn",
+            "Rajesh Baduwal"
+          ],
+          "cat": "Pipeline",
+          "input": "VPS model",
+          "output": "Endpoints in config",
+          "note": null
+        },
+        {
+          "stepId": "e3",
+          "seq": 23,
+          "name": "Adjust Sport Data Timing Sync to Video",
+          "owners": [
+            "Lakshay Bansal",
+            "Buddy Scott",
+            "Charlie Johnson"
+          ],
+          "cat": "Config Tuning",
+          "input": "Stereo video ready + sport data ready",
+          "output": "Sport & video in sync",
+          "note": null
+        },
+        {
+          "stepId": "e4",
+          "seq": 24,
+          "name": "Configure — Frame Segments",
+          "owners": [
+            "Charlie Johnson"
+          ],
+          "cat": "Config",
+          "input": "—",
+          "output": "—",
+          "note": "⚠ We don't know who the target user is"
+        },
+        {
+          "stepId": "e5",
+          "seq": 25,
+          "name": "Configure — Scale Factor",
+          "owners": [
+            "Charlie Johnson"
+          ],
+          "cat": "Config",
+          "input": "Stereo video",
+          "output": "Correct spatial placement",
+          "note": null
+        },
+        {
+          "stepId": "e6",
+          "seq": 26,
+          "name": "Monitoring — Sport Data",
+          "owners": [
+            "Buddy Scott",
+            "Charlie Johnson"
+          ],
+          "cat": "Monitoring",
+          "input": "—",
+          "output": "Report if issues",
+          "note": null
+        }
+      ]
+    },
+    {
+      "phase": "Overlays & Final Tuning",
+      "trackKey": "single",
+      "steps": [
+        {
+          "stepId": "o1",
+          "seq": 27,
+          "name": "Configure — Overlays",
+          "owners": [
+            "Charlie Johnson",
+            "Mikey Cengija",
+            "Goutham Anugunti",
+            "Atharva Puranik"
+          ],
+          "cat": "Config Tuning",
+          "input": "Stereo video approved",
+          "output": "Overlays render OK",
+          "note": "⚠ We need more information here"
+        },
+        {
+          "stepId": "o2",
+          "seq": 28,
+          "name": "Configure — FOP UI Adjustment (fix large disparity)",
+          "owners": [
+            "Charlie Johnson"
+          ],
+          "cat": "Config Tuning",
+          "input": "Overlays render OK",
+          "output": "Overlays placed OK",
+          "note": null
+        },
+        {
+          "stepId": "o3",
+          "seq": 29,
+          "name": "Tune Stereo Disparity (calibration rings on field)",
+          "owners": [
+            "Charlie Johnson"
+          ],
+          "cat": "Config Tuning",
+          "input": "Overlays placed OK",
+          "output": "Overlays placement polished",
+          "note": null
+        },
+        {
+          "stepId": "o4",
+          "seq": 30,
+          "name": "Check Data Overlays & Sport Data Sync",
+          "owners": [
+            "Buddy Scott",
+            "Charlie Johnson"
+          ],
+          "cat": "Test",
+          "input": "Overlays placement polished",
+          "output": "Spatial stream approved",
+          "note": null
+        }
+      ]
+    },
+    {
+      "phase": "Post-Live Monitoring",
+      "trackKey": "mon",
+      "steps": [
+        {
+          "stepId": "m1",
+          "seq": 31,
+          "name": "Monitoring — Video Stream",
+          "owners": [
+            "TBD"
+          ],
+          "cat": "Monitoring",
+          "input": "—",
+          "output": "Report if issues",
+          "note": "⚠ We don't have this yet — We need it"
+        },
+        {
+          "stepId": "m2",
+          "seq": 32,
+          "name": "Monitoring — Sport Data (Live)",
+          "owners": [
+            "Buddy Scott",
+            "Charlie Johnson"
+          ],
+          "cat": "Monitoring",
+          "input": "—",
+          "output": "Report if issues",
+          "note": null
+        }
+      ]
+    }
+  ]
+}

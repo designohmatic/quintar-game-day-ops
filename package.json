@@ -1,0 +1,10 @@
+{
+  "name": "quintar-game-day-ops",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "server": "cd server && node index.js",
+    "server:dev": "cd server && node --watch index.js",
+    "frontend": "python3 -m http.server 8080"
+  }
+}

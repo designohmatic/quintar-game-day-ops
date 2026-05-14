@@ -1,0 +1,10 @@
+{
+  "API": {
+    "Events": {
+      "endpoint": "https://tudaujx3y5cmlk6xm4rskgt374.appsync-api.us-east-1.amazonaws.com/event",
+      "region": "us-east-1",
+      "defaultAuthMode": "apiKey",
+      "apiKey": "da2-3dcptsamkfbafekmjttp7ny5uq"
+    }
+  }
+}

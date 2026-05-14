@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quintar Ops — Event Header Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Questrial&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #000000;
+    --white: #FFFFFF;
+    --blue: #62B3C6;
+    --blue-glow: rgba(98,179,198,0.35);
+    --green: #3DBE7A;
+    --green-glow: rgba(61,190,122,0.3);
+    --amber: #E8A838;
+    --red: #E05252;
+    --gray100: #F2F2F2;
+    --gray200: #C8C9C7;
+    --gray300: #97999B;
+    --gray400: #75787B;
+    --gray500: #53565A;
+    --bg: #0a0b0d;
+    --card: #111316;
+    --card2: #16191d;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ========== WIREFRAME WRAPPER ========== */
+  .wf-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 80px;
+  }
+  .wf-banner {
+    background: linear-gradient(135deg, rgba(232,168,56,0.08), rgba(232,168,56,0.02));
+    border: 1px dashed rgba(232,168,56,0.4);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 22px;
+    font-size: 12px;
+    color: var(--amber);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .wf-banner .label {
+    background: var(--amber);
+    color: #000;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .wf-h1 {
+    font-family: 'Questrial', sans-serif;
+    font-size: 22px;
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+  .wf-sub {
+    color: var(--gray400);
+    font-size: 13px;
+    margin-bottom: 22px;
+  }
+
+  /* ========== EVENT VIEW HEADER (NEW VERSION) ========== */
+  .browser-frame {
+    background: var(--bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .browser-bar {
+    background: #1a1d22;
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; }
+  .dot.y { background: #febc2e; }
+  .dot.g { background: #28c840; }
+  .url-pill {
+    background: var(--bg);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--gray300);
+    margin-left: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .url-pill span { color: var(--blue); }
+
+  /* ===== TOP BAR (modified from prototype) ===== */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(135deg, #0a0b0d 0%, #0d1419 100%);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  /* NEW — back/breadcrumb */
+  .back-btn {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--gray300);
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .back-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  .logo {
+    font-family: 'Questrial', sans-serif;
+    font-size: 18px;
+    color: var(--white);
+    letter-spacing: 0.04em;
+  }
+
+  /* NEW — event name + status group replaces the static EVENT badge */
+  .event-context {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-left: 14px;
+    border-left: 1px solid rgba(255,255,255,0.1);
+    min-width: 0;
+  }
+  .event-name {
+    font-family: 'Questrial', sans-serif;
+    font-size: 15px;
+    color: var(--white);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .event-status {
+    background: rgba(98,179,198,0.15);
+    color: var(--blue);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+  .event-status.live {
+    background: rgba(61,190,122,0.18);
+    color: var(--green);
+    animation: livePulse 2s infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--green-glow); }
+    50% { box-shadow: 0 0 0 4px transparent; }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* NEW — participants present */
+  .participants {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pp-stack {
+    display: flex;
+  }
+  .pp-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    background: linear-gradient(135deg, var(--blue), #3a7a8a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: #000;
+    margin-left: -8px;
+  }
+  .pp-avatar:first-child { margin-left: 0; }
+  .pp-avatar.more { background: var(--card2); color: var(--gray300); border: 1px solid rgba(255,255,255,0.1); }
+  .pp-count {
+    font-size: 11px;
+    color: var(--gray400);
+    margin-left: 4px;
+  }
+
+  .timer {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    color: var(--gray300);
+  }
+  .timer span { color: var(--white); font-weight: 600; font-size: 14px; }
+
+  .progress-pill {
+    background: var(--card2);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 5px 13px;
+    font-size: 11px;
+    color: var(--gray300);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .progress-pill .pct { color: var(--green); font-weight: 600; }
+  .progress-bar-mini {
+    width: 70px;
+    height: 4px;
+    background: var(--gray500);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-bar-mini-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--green));
+    border-radius: 2px;
+  }
+
+  /* ===== ANNOTATIONS ===== */
+  .annotations {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 24px;
+  }
+  .ann-title {
+    font-family: 'Questrial', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    margin-bottom: 14px;
+    color: var(--white);
+  }
+  .ann-list {
+    display: grid;
+    gap: 14px;
+  }
+  .ann-row {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .ann-pin {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .ann-body strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 3px;
+    color: var(--white);
+  }
+  .ann-body p {
+    font-size: 12px;
+    color: var(--gray300);
+    line-height: 1.5;
+  }
+
+  .body-placeholder {
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--gray400);
+    font-size: 12px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(255,255,255,0.01),
+      rgba(255,255,255,0.01) 8px,
+      transparent 8px,
+      transparent 16px
+    );
+  }
+  .body-placeholder strong { color: var(--gray200); }
+
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-top: 18px;
+  }
+  .compare-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gray400);
+    margin-bottom: 4px;
+  }
+
+  /* ===== VARIATIONS ===== */
+  .variant {
+    margin-top: 22px;
+  }
+  .variant-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gray400);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  @media (max-width: 700px) {
+    .event-context { padding-left: 0; border-left: none; width: 100%; margin-top: 6px; }
+    .participants .pp-count { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wf-wrap">
+
+  <div class="wf-banner">
+    <span class="label">WIREFRAME</span>
+    <span>Preview of the new in-event header. Body of the page (phase pips, step cards, flyouts, timers, all interactions) is unchanged from the existing prototype.</span>
+  </div>
+
+  <h1 class="wf-h1">In-Event Header</h1>
+  <p class="wf-sub">What changes inside <code style="color:var(--blue)">/event/:gameId</code> when the prototype becomes multi-session aware.</p>
+
+  <!-- VARIANT 1: SETUP STATE -->
+  <div class="variant">
+    <div class="variant-label">Setup state — most common during pre-game prep</div>
+    <div class="browser-frame">
+      <div class="browser-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="url-pill">ops.quintar.ai<span>/event/lakers-vs-suns-2026-05-11</span></span>
+      </div>
+      <div class="header">
+        <div class="header-left">
+          <a href="landing.html" class="back-btn" title="Back to sessions">‹</a>
+          <div class="logo">QUINTAR</div>
+          <div class="event-context">
+            <div class="event-name">Lakers vs Suns</div>
+            <div class="event-status">Setup</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="participants" title="People in this session">
+            <div class="pp-stack">
+              <div class="pp-avatar" style="background:linear-gradient(135deg,#62B3C6,#3a7a8a)">CJ</div>
+              <div class="pp-avatar" style="background:linear-gradient(135deg,#E8A838,#8a6010)">T</div>
+              <div class="pp-avatar" style="background:linear-gradient(135deg,#3DBE7A,#1a6a3c)">K</div>
+              <div class="pp-avatar more">+1</div>
+            </div>
+            <span class="pp-count">4 here</span>
+          </div>
+          <div class="timer">Elapsed: <span>00:42:18</span></div>
+          <div class="progress-pill">
+            <span><span class="pct">34%</span> complete</span>
+            <div class="progress-bar-mini"><div class="progress-bar-mini-fill" style="width:34%"></div></div>
+            <span>12 / 35</span>
+          </div>
+        </div>
+      </div>
+      <div class="body-placeholder">
+        <strong>(Phase progress pips + step cards continue here — unchanged from current prototype)</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARIANT 2: LIVE STATE -->
+  <div class="variant">
+    <div class="variant-label">Live state — stream is on air</div>
+    <div class="browser-frame">
+      <div class="browser-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="url-pill">ops.quintar.ai<span>/event/celtics-vs-heat-2026-05-11</span></span>
+      </div>
+      <div class="header">
+        <div class="header-left">
+          <a href="landing.html" class="back-btn" title="Back to sessions">‹</a>
+          <div class="logo">QUINTAR</div>
+          <div class="event-context">
+            <div class="event-name">Celtics vs Heat</div>
+            <div class="event-status live">● Live</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="participants" title="People in this session">
+            <div class="pp-stack">
+              <div class="pp-avatar" style="background:linear-gradient(135deg,#62B3C6,#3a7a8a)">CJ</div>
+              <div class="pp-avatar" style="background:linear-gradient(135deg,#E05252,#7a1a1a)">Y</div>
+            </div>
+            <span class="pp-count">2 here</span>
+          </div>
+          <div class="timer">Stream: <span>01:24:06</span></div>
+          <div class="progress-pill">
+            <span><span class="pct">94%</span> complete</span>
+            <div class="progress-bar-mini"><div class="progress-bar-mini-fill" style="width:94%"></div></div>
+            <span>33 / 35</span>
+          </div>
+        </div>
+      </div>
+      <div class="body-placeholder">
+        <strong>(Phase progress pips + step cards continue here — unchanged from current prototype)</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANNOTATIONS -->
+  <div class="annotations">
+    <div class="ann-title">What changed</div>
+    <div class="ann-list">
+
+      <div class="ann-row">
+        <div class="ann-pin">1</div>
+        <div class="ann-body">
+          <strong>Back button (new)</strong>
+          <p>30×30 chip on the far left, returns to <code style="color:var(--blue)">/</code> (the landing). Quiet by default, blue on hover. Makes the multi-session model legible — you're <em>inside</em> an event, not <em>at</em> the app.</p>
+        </div>
+      </div>
+
+      <div class="ann-row">
+        <div class="ann-pin">2</div>
+        <div class="ann-body">
+          <strong>Event name + status pill (new)</strong>
+          <p>Replaces the static <code style="color:var(--blue)">EVENT</code> badge from the prototype. Shows which event you're inside and its lifecycle state (Setup → Live → Complete). The Live pill pulses green, mirroring the existing GO LIVE top-bar treatment.</p>
+        </div>
+      </div>
+
+      <div class="ann-row">
+        <div class="ann-pin">3</div>
+        <div class="ann-body">
+          <strong>Participants present (new)</strong>
+          <p>Stacked avatars of users currently in this Socket.IO room, with a "+N" overflow. Shows live presence — who else is looking at this checklist right now. Click would open a small roster popover (later).</p>
+        </div>
+      </div>
+
+      <div class="ann-row">
+        <div class="ann-pin">4</div>
+        <div class="ann-body">
+          <strong>Elapsed timer + Progress pill (preserved)</strong>
+          <p>Same components as today's prototype. Elapsed is still the time since the event was created. Progress pill still shows percentage complete and step count. No visual change.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="annotations">
+    <div class="ann-title">What did NOT change</div>
+    <div class="ann-list">
+      <div class="ann-row">
+        <div class="ann-pin" style="background:var(--green)">✓</div>
+        <div class="ann-body">
+          <strong>Everything below the header</strong>
+          <p>Phase progress pips (sticky), step cards, long-press flyouts, escalation ladder, note forms, auto-advance chain, undo cascade, step timers, issue duration tracking, Resolved action, Stream Live banner, time report, CSV export, all brand tokens, all interaction handlers — untouched.</p>
+        </div>
+      </div>
+      <div class="ann-row">
+        <div class="ann-pin" style="background:var(--green)">✓</div>
+        <div class="ann-body">
+          <strong>Phase pips + GO LIVE state</strong>
+          <p>The sticky phase progress bar remains directly below this header. The GO LIVE pip still lights green when all steps complete. The state pill in the top-right header is a redundant cue, not a replacement.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center; color:var(--gray400); font-size:12px; margin-top:30px;">
+    <a href="landing.html" style="color:var(--blue); text-decoration:none;">← Back to landing wireframe</a>
+    &nbsp;·&nbsp;
+    <a href="quintar-ops.html" style="color:var(--blue); text-decoration:none;">View current prototype →</a>
+  </p>
+
+</div>
+
+</body>
+</html>
