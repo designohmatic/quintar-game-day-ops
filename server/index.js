@@ -8,6 +8,7 @@ const pino    = require('pino');
 
 const { getDb }    = require('./db');
 const gamesRouter  = require('./routes/games');
+const rosterService = require('./roster-service');
 
 const PORT      = parseInt(process.env.PORT || '3005', 10);
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
@@ -53,6 +54,11 @@ app.get('/health', (req, res) => {
 
 app.use('/api/games', gamesRouter);
 
+// Enriched roster (raw roster.json + live slackHandle from Slack users.info)
+app.get('/api/roster', (req, res) => {
+  res.json(rosterService.getRoster());
+});
+
 // Attention endpoint is NOT under /api/games/:gameId to avoid routing collision
 app.get('/api/attention/:userName', (req, res) => {
   // Delegate to the games router handler inline
@@ -95,4 +101,10 @@ app.listen(PORT, () => {
   logger.info(`quintar-ops server listening on :${PORT}`);
   // Warm the DB connection so first request isn't slow
   try { getDb(); logger.info('SQLite ready'); } catch (e) { logger.error(e, 'SQLite init failed'); }
+  // Kick off roster enrichment in the background — first request to
+  // /api/roster will see whatever's ready (raw roster.json initially,
+  // enriched once users.info completes).
+  rosterService.start()
+    .then(r => logger.info(`roster enriched: ${r?.length || 0} entries`))
+    .catch(e => logger.warn({ err: e.message }, 'roster enrichment failed'));
 });

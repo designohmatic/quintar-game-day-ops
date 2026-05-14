@@ -4,6 +4,8 @@ const express  = require('express');
 const router   = express.Router();
 const { getDb, rowToEvent, rowToStep } = require('../db');
 const { materializeSteps } = require('../template-loader');
+const slack          = require('../slack');
+const rosterService  = require('../roster-service');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -25,6 +27,45 @@ function fetchEvent(db, gameId) {
   if (!gameRow) return null;
   const stepRows = db.prepare('SELECT * FROM step_states WHERE game_id = ? ORDER BY seq ASC').all(gameId);
   return rowToEvent(gameRow, stepRows);
+}
+
+/**
+ * Fire-and-forget Slack notification after a step transition.
+ * Never throws — Slack errors are swallowed inside slack.js. The REST
+ * response has already been sent by the time this runs.
+ */
+function _notifyTransitionAsync(gameId, stepId, transition, payload) {
+  setImmediate(async () => {
+    try {
+      const db    = getDb();
+      const event = fetchEvent(db, gameId);
+      if (!event) return;
+      const step  = event.steps.find(s => s.stepId === stepId);
+      if (!step) return;
+
+      // Always reflect new state in the pinned message
+      slack.updatePinnedStatus(gameId, event, event.pinnedSlackMessageTs);
+
+      const owners = step.owners || [];
+      const slackIds = owners
+        .map(name => rosterService.slackIdForName(name))
+        .filter(Boolean);
+
+      if (transition === 'activate') {
+        const msg = slack.formatStepActivationDM(event, step);
+        for (const uid of slackIds) slack.dmOwner(uid, msg);
+      } else if (transition === 'flag' || transition === 'block') {
+        slack.postEscalation(gameId, event.pinnedSlackMessageTs, step.name, transition, payload?.note, payload?.actor);
+        const msg = slack.formatStepIssueDM(event, step, transition, payload?.note);
+        for (const uid of slackIds) slack.dmOwner(uid, msg);
+      } else if (transition === 'resolve') {
+        slack.postEscalation(gameId, event.pinnedSlackMessageTs, step.name, 'resolve', null, payload?.actor);
+      }
+      // complete / deactivate / undo: pinned-status update only (already fired above)
+    } catch (err) {
+      console.error('[slack] notifyTransition failed:', err.message);
+    }
+  });
 }
 
 // ── GET /api/games ────────────────────────────────────────────────────────────
@@ -108,7 +149,22 @@ router.post('/', (req, res) => {
     insertActivity.run(gameId, now);
   })();
 
-  res.status(201).json(fetchEvent(db, gameId));
+  const event = fetchEvent(db, gameId);
+
+  // Fire-and-forget: post the pinned status to Slack; when it resolves,
+  // persist the message ts so subsequent updates can edit in place.
+  slack.postPinnedStatus(gameId, event)
+    .then(ts => {
+      if (!ts) return;
+      try {
+        db.prepare('UPDATE games SET pinned_slack_message_ts=? WHERE id=?').run(ts, gameId);
+      } catch (e) {
+        console.error('[slack] persist pinnedTs failed:', e.message);
+      }
+    })
+    .catch(err => console.error('[slack] postPinnedStatus chain failed:', err.message));
+
+  res.status(201).json(event);
 });
 
 // ── PATCH /api/games/:gameId ──────────────────────────────────────────────────
@@ -160,7 +216,12 @@ router.post('/:gameId/end', (req, res) => {
   const now = Date.now();
   db.prepare("UPDATE games SET status='complete', completed_at=? WHERE id=?").run(now, gameId);
   db.prepare("INSERT INTO activity_log (game_id, ts, action) VALUES (?, ?, 'event.ended')").run(gameId, now);
-  res.json(fetchEvent(db, gameId));
+
+  const event   = fetchEvent(db, gameId);
+  const elapsed = (event.completedAt && event.startedAt) ? (event.completedAt - event.startedAt) : 0;
+  slack.postStreamLive(gameId, event.pinnedSlackMessageTs, event, elapsed);
+
+  res.json(event);
 });
 
 // ── POST /api/games/:gameId/archive ──────────────────────────────────────────
@@ -236,6 +297,9 @@ router.post('/:gameId/steps/:stepId/transition', (req, res) => {
     .run(gameId, now, `step.${transition}`, stepId, payload.actor || null, JSON.stringify(payload));
 
   const updated = db.prepare('SELECT * FROM step_states WHERE game_id=? AND step_id=?').get(gameId, stepId);
+
+  _notifyTransitionAsync(gameId, stepId, transition, payload);
+
   res.json(rowToStep(updated));
 });
 

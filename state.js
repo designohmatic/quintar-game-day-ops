@@ -143,6 +143,15 @@ async function _appSyncPublish(payload) {
 
 export async function loadRoster() {
   if (_roster) return _roster;
+  // Prefer the server's enriched roster (adds live slackHandle from Slack users.info).
+  // Fall back to the static roster.json if the API is unavailable.
+  try {
+    const res = await fetch(`${API_BASE}/api/roster`);
+    if (res.ok) {
+      _roster = await res.json();
+      return _roster;
+    }
+  } catch (_) { /* fall through */ }
   const res = await fetch('roster.json');
   if (!res.ok) throw new Error(`roster.json fetch failed: ${res.status}`);
   _roster = await res.json();
