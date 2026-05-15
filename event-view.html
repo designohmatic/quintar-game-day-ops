@@ -1087,16 +1087,10 @@
   }
 
 </style>
-<script>
-// AppSync Event API config — injected at build time in production,
-// inlined here for local dev and staging. API key is low-sensitivity
-// (private internal tool, no PII or write access to backend DB).
-window.APPSYNC_CONFIG = {
-  endpoint: 'https://tudaujx3y5cmlk6xm4rskgt374.appsync-api.us-east-1.amazonaws.com/event',
-  region:   'us-east-1',
-  apiKey:   'da2-3dcptsamkfbafekmjttp7ny5uq',
-};
-</script>
+<!-- AppSync config: loaded from amplify_outputs.js (gitignored). The file
+     sets window.APPSYNC_CONFIG synchronously so state.js sees it when imported.
+     Copy amplify_outputs.example.js → amplify_outputs.js to populate locally. -->
+<script src="amplify_outputs.js"></script>
 </head>
 <body>
 

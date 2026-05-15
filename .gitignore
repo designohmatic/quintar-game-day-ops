@@ -4,6 +4,10 @@
 .env.*.local
 *.env
 
+# AppSync config (contains API key — local + prod values populated outside git)
+amplify_outputs.json
+amplify_outputs.js
+
 # Dependencies
 node_modules/
 package-lock.json.bak
