@@ -15,7 +15,10 @@ function slugify(str) {
 
 function generateGameId(name, startsAt, existing) {
   const dateStr = (startsAt || new Date().toISOString().split('T')[0]).slice(0, 10);
-  const base    = `${slugify(name)}-${dateStr}`;
+  const slug    = slugify(name);
+  // Skip the date suffix if the name already ends with a YYYY-MM-DD,
+  // so "Phase D QA — 2026-05-14" → "phase-d-qa-2026-05-14" (not double-dated).
+  const base    = /\d{4}-\d{2}-\d{2}$/.test(slug) ? slug : `${slug}-${dateStr}`;
   let   id      = base;
   let   n       = 2;
   while (existing.has(id)) { id = `${base}-${n++}`; }
