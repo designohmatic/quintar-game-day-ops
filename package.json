@@ -5,6 +5,9 @@
   "scripts": {
     "server": "cd server && node index.js",
     "server:dev": "cd server && node --watch index.js",
-    "frontend": "python3 -m http.server 8080"
+    "frontend": "python3 -m http.server 8080",
+    "build:frontend": "node build-frontend.mjs",
+    "deploy:frontend": "bash scripts/deploy-frontend.sh",
+    "deploy:backend": "bash scripts/deploy-backend.sh"
   }
 }

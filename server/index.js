@@ -24,7 +24,10 @@ const app = express();
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
-app.use(cors()); // open in dev; tighten to CORS_ALLOWED_ORIGIN before prod
+// CORS: when CORS_ALLOWED_ORIGIN is set (prod), restrict to that origin.
+// When unset (dev), open — frontend dev server runs on a separate port.
+const corsOrigin = process.env.CORS_ALLOWED_ORIGIN;
+app.use(cors(corsOrigin ? { origin: corsOrigin } : {}));
 
 app.use(express.json());
 
@@ -35,7 +38,7 @@ app.use((req, _res, next) => {
 
 // ── Health check ──────────────────────────────────────────────────────────────
 
-app.get('/health', (req, res) => {
+function healthHandler(_req, res) {
   let dbOk = false;
   try {
     getDb().prepare('SELECT 1').get();
@@ -48,7 +51,12 @@ app.get('/health', (req, res) => {
     db:      dbOk ? 'ok' : 'error',
     uptime:  Math.floor(process.uptime()),
   });
-});
+}
+
+// /health for direct EC2 hits; /api/health so CloudFront origin checks
+// (which only route /api/* to EC2) work without extra behaviors.
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
