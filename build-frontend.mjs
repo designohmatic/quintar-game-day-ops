@@ -2,7 +2,7 @@
 /*
  * build-frontend.mjs — bundles the static frontend for S3.
  *
- * Output: ./dist/ containing landing.html, event-view.html, state.js,
+ * Output: ./dist/ containing index.html, event-view.html, state.js,
  * roster.json, template.json, amplify_outputs.js (placeholder).
  *
  * What changes vs the source files:
@@ -28,7 +28,7 @@ fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 
 // ── Static assets copied verbatim ────────────────────────────────────────────
-for (const f of ['state.js', 'roster.json', 'template.json']) {
+for (const f of ['state.js', 'identity.js', 'roster.json', 'template.json']) {
   fs.copyFileSync(path.join(ROOT, f), path.join(OUT, f));
 }
 
@@ -38,7 +38,7 @@ for (const f of ['state.js', 'roster.json', 'template.json']) {
 // the global is unset, so dev workflow is unaffected.
 const configTag = `<script>window.QUINTAR_API_BASE=${JSON.stringify(API_BASE)};</script>`;
 
-for (const f of ['landing.html', 'event-view.html']) {
+for (const f of ['index.html', 'event-view.html']) {
   const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
   const marker = '<script type="module">';
   const idx = src.indexOf(marker);
@@ -52,14 +52,6 @@ for (const f of ['landing.html', 'event-view.html']) {
 fs.copyFileSync(
   path.join(ROOT, 'amplify_outputs.example.js'),
   path.join(OUT, 'amplify_outputs.js'),
-);
-
-// ── Default root object ──────────────────────────────────────────────────────
-// CloudFront's default root maps `/` → `landing.html`. Setting it in S3 too is
-// belt-and-suspenders for direct-S3 access if needed.
-fs.copyFileSync(
-  path.join(OUT, 'landing.html'),
-  path.join(OUT, 'index.html'),
 );
 
 console.log(`Built ${path.relative(ROOT, OUT)}/ — API_BASE=${API_BASE}`);

@@ -349,6 +349,32 @@ router.patch('/:gameId/steps/:stepId/owners', (req, res) => {
   res.json(rowToStep(updated));
 });
 
+// ── PATCH /api/games/:gameId/steps/:stepId/note ──────────────────────────────
+
+router.patch('/:gameId/steps/:stepId/note', (req, res) => {
+  const db = getDb();
+  const { gameId, stepId } = req.params;
+  const { text, actor } = req.body;
+
+  if (typeof text !== 'string') return res.status(400).json({ error: 'text must be a string' });
+
+  const stepRow = db.prepare('SELECT 1 FROM step_states WHERE game_id=? AND step_id=?').get(gameId, stepId);
+  if (!stepRow) return res.status(404).json({ error: 'step not found' });
+
+  const now = Date.now();
+  const trimmed = text.trim();
+  // Empty string clears the note (and its metadata) — distinguishes "deleted" from "never set".
+  db.prepare(
+    'UPDATE step_states SET user_note=?, user_note_actor=?, user_note_updated_at=? WHERE game_id=? AND step_id=?'
+  ).run(trimmed || null, trimmed ? (actor || null) : null, trimmed ? now : null, gameId, stepId);
+
+  db.prepare("INSERT INTO activity_log (game_id, ts, action, step_id, actor, payload) VALUES (?,?,?,?,?,?)")
+    .run(gameId, now, 'step.note', stepId, actor || null, JSON.stringify({ text: trimmed }));
+
+  const updated = db.prepare('SELECT * FROM step_states WHERE game_id=? AND step_id=?').get(gameId, stepId);
+  res.json(rowToStep(updated));
+});
+
 // ── GET /api/attention/:userName ──────────────────────────────────────────────
 
 router.get('/attention/:userName', (req, res) => {

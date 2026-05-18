@@ -929,6 +929,105 @@
     margin-bottom: 2px;
   }
 
+  /* Free-form user note block (separate from flag/block notes) */
+  .step-notes-block { margin-top: 10px; }
+  .step-notes-add {
+    background: transparent;
+    border: 1px dashed rgba(255,255,255,0.18);
+    color: var(--gray400);
+    font: inherit;
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: border-color 120ms, color 120ms, background 120ms;
+  }
+  .step-notes-add:hover {
+    border-color: rgba(98,179,198,0.5);
+    color: var(--blue);
+    background: rgba(98,179,198,0.05);
+  }
+  .step-notes-view {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 11px;
+    line-height: 1.5;
+    position: relative;
+  }
+  .step-notes-view-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gray400);
+    margin-bottom: 4px;
+  }
+  .step-notes-view-text {
+    color: var(--white);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .step-notes-view-meta {
+    font-size: 10px;
+    color: var(--gray500);
+    margin-top: 4px;
+  }
+  .step-notes-edit-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: transparent;
+    border: none;
+    color: var(--gray400);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .step-notes-edit-btn:hover { color: var(--blue); background: rgba(98,179,198,0.08); }
+  .step-notes-editor textarea {
+    width: 100%;
+    min-height: 70px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(98,179,198,0.4);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--white);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: vertical;
+  }
+  .step-notes-editor textarea:focus { outline: none; border-color: var(--blue); }
+  .step-notes-editor-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    justify-content: flex-end;
+  }
+  .step-notes-editor-actions button {
+    font: inherit;
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .step-notes-editor-actions .save {
+    background: var(--blue);
+    color: #000;
+    border: 1px solid var(--blue);
+    font-weight: 600;
+  }
+  .step-notes-editor-actions .cancel {
+    background: transparent;
+    color: var(--gray400);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
   /* Step timer in accordion */
   .step-timer {
     display: flex;
@@ -1096,12 +1195,12 @@
 
 <header class="header">
   <div class="header-left">
-    <a href="landing.html" class="back-btn" title="Back to sessions" aria-label="Back to sessions">‹</a>
+    <a href="index.html" class="back-btn" title="Back to sessions" aria-label="Back to sessions">‹</a>
     <div class="logo">QUINTAR</div>
     <div class="event-context">
       <div class="event-name" id="event-name">Lakers vs Suns</div>
       <div class="event-status" id="event-status">Setup</div>
-      <a class="event-edit-btn" id="event-edit-btn" href="landing.html" title="Edit event" aria-label="Edit event">
+      <a class="event-edit-btn" id="event-edit-btn" href="index.html" title="Edit event" aria-label="Edit event">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 20h9"></path>
           <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
@@ -1129,7 +1228,7 @@
 </header>
 
 <script>
-  // Read event context from URL params (passed from landing.html)
+  // Read event context from URL params (passed from index.html)
   (function() {
     const p = new URLSearchParams(window.location.search);
     const name = p.get('name');
@@ -1143,7 +1242,7 @@
       el.textContent = labels[status] || 'Setup';
     }
     if (gameId) {
-      document.getElementById('event-edit-btn').href = `landing.html?edit=${encodeURIComponent(gameId)}`;
+      document.getElementById('event-edit-btn').href = `index.html?edit=${encodeURIComponent(gameId)}`;
     }
   })();
 </script>
@@ -1171,8 +1270,15 @@ import {
   loadTemplate, loadRoster,
   getEvent, createEvent, updateEvent as stateUpdateEvent,
   transitionStep as stateTransitionStep,
+  updateStepNote as stateUpdateStepNote,
   subscribe as stateSubscribe
 } from './state.js';
+import { getCurrentUser, requireUser } from './identity.js';
+
+// Identity must be set before any persist call so the server can attribute
+// actions. Block here so the modal renders before getEvent/createEvent.
+const _roster = await loadRoster();
+await requireUser(_roster);
 
 // gameId for state.js persistence — pulled from URL params, falls back to wireframe default
 const _qsParams = new URLSearchParams(window.location.search);
@@ -1229,8 +1335,22 @@ if (_serverEvent) {
 // Local mutations arrive with _isLocal:true (already applied) — skip them.
 // Remote events trigger a full re-sync from the server then re-render.
 stateSubscribe(GAME_ID, async (patch) => {
-  if (patch.type !== 'step.transition') return;
   if (patch._isLocal) return;
+
+  // Free-form user note edits arrive as step.note — apply directly to the
+  // local step and re-render. No need to re-fetch the whole event.
+  if (patch.type === 'step.note') {
+    const local = steps.find(s => s.id === patch.stepId);
+    if (local) {
+      local.userNote          = patch.userNote || '';
+      local.userNoteActor     = patch.userNoteActor || null;
+      local.userNoteUpdatedAt = patch.userNoteUpdatedAt || null;
+      render();
+    }
+    return;
+  }
+
+  if (patch.type !== 'step.transition') return;
   try {
     const fresh = await getEvent(GAME_ID);
     if (!fresh?.steps) return;
@@ -1311,6 +1431,10 @@ if (_serverEvent && _serverEvent.steps) {
     local.status = ss.status;
     // User-entered flag/block note (not the template note field)
     if (ss.note) local.note = ss.note;
+    // Free-form user note (separate from flag/block reason)
+    local.userNote          = ss.userNote || '';
+    local.userNoteActor     = ss.userNoteActor || null;
+    local.userNoteUpdatedAt = ss.userNoteUpdatedAt || null;
     // Per-event owner overrides
     if (ss.owners && ss.owners.length) {
       local.owners = ss.owners;
@@ -1618,6 +1742,86 @@ function submitNote(id) {
     blockStep(id, text);
   }
   pendingNoteAction = {};
+}
+
+// ===== FREE-FORM USER NOTES =====
+// Separate from flag/block notes — these are general-purpose notes the team
+// can attach to any step at any time, captured in the end-of-event report.
+
+function _escHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function _formatNoteTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function renderStepNotesBlock(step) {
+  if (step.userNote) {
+    const meta = step.userNoteActor
+      ? `${_escHtml(step.userNoteActor)} · ${_formatNoteTime(step.userNoteUpdatedAt)}`
+      : _formatNoteTime(step.userNoteUpdatedAt);
+    return `
+      <div class="step-notes-view">
+        <button class="step-notes-edit-btn" onclick="event.stopPropagation();editStepNote('${step.id}')" title="Edit note">✎</button>
+        <div class="step-notes-view-label">Notes</div>
+        <div class="step-notes-view-text">${_escHtml(step.userNote)}</div>
+        <div class="step-notes-view-meta">${meta}</div>
+      </div>`;
+  }
+  return `<button class="step-notes-add" onclick="event.stopPropagation();editStepNote('${step.id}')">+ Add note</button>`;
+}
+
+function editStepNote(stepId) {
+  const block = document.getElementById('notes-block-' + stepId);
+  if (!block) return;
+  const step = steps.find(s => s.id === stepId);
+  const current = step?.userNote || '';
+  block.innerHTML = `
+    <div class="step-notes-editor">
+      <textarea id="step-notes-input-${stepId}" placeholder="Add notes for the report — observations, follow-ups, knowledge to capture…">${_escHtml(current)}</textarea>
+      <div class="step-notes-editor-actions">
+        <button type="button" class="cancel" onclick="event.stopPropagation();cancelStepNote('${stepId}')">Cancel</button>
+        <button type="button" class="save"   onclick="event.stopPropagation();saveStepNote('${stepId}')">Save</button>
+      </div>
+    </div>`;
+  const ta = document.getElementById('step-notes-input-' + stepId);
+  if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+}
+
+function cancelStepNote(stepId) {
+  const block = document.getElementById('notes-block-' + stepId);
+  const step  = steps.find(s => s.id === stepId);
+  if (block && step) block.innerHTML = renderStepNotesBlock(step);
+}
+
+async function saveStepNote(stepId) {
+  const ta = document.getElementById('step-notes-input-' + stepId);
+  if (!ta) return;
+  const text = ta.value.trim();
+  const step = steps.find(s => s.id === stepId);
+  if (!step) return;
+
+  // Optimistic local update so the UI feels instant; server response confirms.
+  step.userNote          = text;
+  step.userNoteActor     = getCurrentUser()?.name || step.userNoteActor;
+  step.userNoteUpdatedAt = Date.now();
+  cancelStepNote(stepId); // re-render in view mode
+
+  try {
+    const updated = await stateUpdateStepNote(GAME_ID, stepId, text);
+    step.userNote          = updated.userNote || '';
+    step.userNoteActor     = updated.userNoteActor;
+    step.userNoteUpdatedAt = updated.userNoteUpdatedAt;
+    const block = document.getElementById('notes-block-' + stepId);
+    if (block) block.innerHTML = renderStepNotesBlock(step);
+  } catch (err) {
+    console.warn(`saveStepNote failed for ${stepId}:`, err);
+  }
 }
 
 // ===== STATE CHANGES =====
@@ -2006,6 +2210,9 @@ function renderCard(step) {
           <div class="detail-user-note-label">${stepNotes[step.id].type === 'flag' ? '⚠ Flagged' : '✕ Blocked'} — User Note</div>
           ${stepNotes[step.id].text}
         </div>` : ''}
+        <div class="step-notes-block" id="notes-block-${step.id}" onclick="event.stopPropagation()">
+          ${renderStepNotesBlock(step)}
+        </div>
         ${timerHtml}
         <div class="action-wrap">
           <div class="flyout" id="flyout-${step.id}">${flyoutOptions}</div>
@@ -2225,7 +2432,12 @@ function buildReportData() {
         })),
         totalIssueDurationMs: totalIssueDuration,
         totalIssueDuration: totalIssueDuration > 0 ? formatDuration(totalIssueDuration) : '—',
-        note: (stepNotes[step.id] && stepNotes[step.id].text) || '',
+        // Flag/block reason captured during incidents (existing)
+        issueNote: (stepNotes[step.id] && stepNotes[step.id].text) || '',
+        // Free-form user note captured via the step drawer (knowledge-base feed)
+        note:           step.userNote || '',
+        noteActor:      step.userNoteActor || '',
+        noteUpdatedAt:  step.userNoteUpdatedAt || null,
       });
     });
   });
@@ -2234,23 +2446,30 @@ function buildReportData() {
 
 function downloadCSV() {
   const rows = buildReportData();
-  const headers = ['Phase','Seq','Step','Track','Category','Owner','Status','Step Duration','Issue Type','Issue Duration','Issue Resolved','Total Issue Time','Note'];
+  const headers = ['Phase','Seq','Step','Track','Category','Owner','Status','Step Duration','Issue Type','Issue Duration','Issue Resolved','Total Issue Time','Issue Note','Note','Note Author','Note Time'];
   const csvRows = [headers.join(',')];
+  const csvEscape = s => `"${String(s ?? '').replace(/"/g, '""')}"`;
 
   rows.forEach(r => {
+    const noteTime = r.noteUpdatedAt ? new Date(r.noteUpdatedAt).toISOString() : '';
     if (r.issues.length === 0) {
       csvRows.push([
-        `"${r.phase}"`, r.seq, `"${r.title}"`, r.track, `"${r.cat}"`,
-        `"${r.owner}"`, r.status, `"${r.activeDuration}"`,
-        '', '', '', `"${r.totalIssueDuration}"`, `"${r.note}"`
+        csvEscape(r.phase), r.seq, csvEscape(r.title), r.track, csvEscape(r.cat),
+        csvEscape(r.owner), r.status, csvEscape(r.activeDuration),
+        '', '', '', csvEscape(r.totalIssueDuration),
+        csvEscape(r.issueNote), csvEscape(r.note), csvEscape(r.noteActor), csvEscape(noteTime)
       ].join(','));
     } else {
       r.issues.forEach((iss, i) => {
         csvRows.push([
-          `"${r.phase}"`, r.seq, `"${r.title}"`, r.track, `"${r.cat}"`,
-          `"${r.owner}"`, r.status, i === 0 ? `"${r.activeDuration}"` : '',
-          iss.type, `"${iss.duration}"`, iss.resolved ? 'Yes' : 'No',
-          i === 0 ? `"${r.totalIssueDuration}"` : '', i === 0 ? `"${r.note}"` : ''
+          csvEscape(r.phase), r.seq, csvEscape(r.title), r.track, csvEscape(r.cat),
+          csvEscape(r.owner), r.status, i === 0 ? csvEscape(r.activeDuration) : '',
+          iss.type, csvEscape(iss.duration), iss.resolved ? 'Yes' : 'No',
+          i === 0 ? csvEscape(r.totalIssueDuration) : '',
+          i === 0 ? csvEscape(r.issueNote) : '',
+          i === 0 ? csvEscape(r.note) : '',
+          i === 0 ? csvEscape(r.noteActor) : '',
+          i === 0 ? csvEscape(noteTime) : ''
         ].join(','));
       });
     }
@@ -2322,6 +2541,17 @@ function openTimeReport() {
         }).join('');
       }
 
+      const noteHtml = r.note ? `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+          <td colspan="5" style="padding:0 8px 10px 8px;">
+            <div style="background:rgba(98,179,198,0.05);border-left:2px solid rgba(98,179,198,0.5);padding:8px 12px;font-size:11px;line-height:1.5;border-radius:0 4px 4px 0;">
+              <div style="font-size:9px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#97999B;margin-bottom:4px;">Notes</div>
+              <div style="color:#F2F2F2;white-space:pre-wrap;">${_escHtml(r.note)}</div>
+              ${r.noteActor || r.noteUpdatedAt ? `<div style="font-size:10px;color:#75787B;margin-top:4px;">${_escHtml(r.noteActor || '')}${r.noteActor && r.noteUpdatedAt ? ' · ' : ''}${_formatNoteTime(r.noteUpdatedAt)}</div>` : ''}
+            </div>
+          </td>
+        </tr>` : '';
+
       phaseHtml += `
         <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
           <td style="padding:8px;color:#F2F2F2;"><span style="color:#53565A;font-size:10px;margin-right:4px;">${r.seq}</span> ${r.title}</td>
@@ -2330,6 +2560,7 @@ function openTimeReport() {
           <td style="padding:8px;color:#F2F2F2;font-weight:600;font-variant-numeric:tabular-nums;">${r.activeDuration}</td>
           <td style="padding:8px;font-size:11px;">${issueCell}</td>
         </tr>
+        ${noteHtml}
       `;
     });
 
@@ -2427,7 +2658,10 @@ Object.assign(window, {
   endLongPress,
   cancelLongPress,
   activateOption,
-  downloadCSV
+  downloadCSV,
+  editStepNote,
+  saveStepNote,
+  cancelStepNote
 });
 </script>
 </body>

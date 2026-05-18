@@ -14,6 +14,8 @@
  * before importing (injected by a <script> tag in the HTML).
  */
 
+import { getCurrentUser } from './identity.js';
+
 const API_BASE = (typeof window !== 'undefined' && window.QUINTAR_API_BASE)
   ? window.QUINTAR_API_BASE.replace(/\/$/, '')
   : 'http://localhost:3005';
@@ -228,14 +230,17 @@ export async function archiveEvent(gameId) {
  * ====================================================================== */
 
 export async function transitionStep(gameId, stepId, transition, payload = {}) {
+  // Inject actor from the locally-stored identity so the server can attribute
+  // activity log + Slack escalation messages. Caller's payload.actor wins.
+  const actor = payload.actor ?? getCurrentUser()?.name;
   const step = await _api(
     'POST',
     `/api/games/${encodeURIComponent(gameId)}/steps/${encodeURIComponent(stepId)}/transition`,
-    { transition, payload }
+    { transition, payload: { ...payload, actor } }
   );
   _emit(gameId, { type: 'step.transition', stepId, transition, step });
   // Publish to AppSync so other tabs receive the update in real time.
-  _appSyncPublish({ gameId, stepId, transition, _tabId });
+  _appSyncPublish({ gameId, stepId, transition, actor, _tabId });
   return step;
 }
 
@@ -246,6 +251,19 @@ export async function assignStepOwners(gameId, stepId, owners) {
     { owners }
   );
   _emit(gameId, { type: 'step.owners', stepId, owners });
+  return step;
+}
+
+export async function updateStepNote(gameId, stepId, text) {
+  const actor = getCurrentUser()?.name || null;
+  const step = await _api(
+    'PATCH',
+    `/api/games/${encodeURIComponent(gameId)}/steps/${encodeURIComponent(stepId)}/note`,
+    { text, actor }
+  );
+  _emit(gameId, { type: 'step.note', stepId, step });
+  // Publish to AppSync so other tabs receive the note update in real time.
+  _appSyncPublish({ gameId, stepId, transition: 'note', userNote: step.userNote, userNoteActor: step.userNoteActor, userNoteUpdatedAt: step.userNoteUpdatedAt, actor, _tabId });
   return step;
 }
 
@@ -269,7 +287,8 @@ export function subscribe(gameId, callback) {
   // This is intentionally fire-and-forget — subscribe() stays synchronous
   // so callers don't need to await it.
   _appSyncConnect(gameId, (ev) => {
-    _emitRemote(gameId, { type: 'step.transition', ...ev });
+    const type = ev.transition === 'note' ? 'step.note' : 'step.transition';
+    _emitRemote(gameId, { type, ...ev });
   }).catch(e => console.error('AppSync connect failed:', e));
 
   return () => {

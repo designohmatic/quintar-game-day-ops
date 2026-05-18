@@ -142,7 +142,7 @@ Per `IT_SETUP_V2.md` §14, but tightened:
 - Second origin → EC2 box on **port 3005**, plain HTTP. Protocol: HTTP only. Origin shield: off for dev.
 - Default cache behavior → S3 origin, GET/HEAD only, default cache policy.
 - Cache behavior for path pattern `/api/*` → EC2 origin, **all methods**, **caching disabled**, forward **all headers**, **all query strings**, **all cookies**. Origin request policy: `Managed-AllViewer` is fine.
-- Default root object: `index.html` (the build emits `landing.html` and a copy as `index.html` so root hits land on the picker).
+- Default root object: `index.html` (the landing/picker page).
 - TLS: attach the ACM cert. Viewer protocol policy: Redirect HTTP to HTTPS.
 
 ### DNS

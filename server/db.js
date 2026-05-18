@@ -52,6 +52,9 @@ function getDb() {
       completed_at  INTEGER,
       actor         TEXT,
       note          TEXT,
+      user_note     TEXT,
+      user_note_actor TEXT,
+      user_note_updated_at INTEGER,
       PRIMARY KEY (game_id, step_id)
     );
 
@@ -91,6 +94,13 @@ function getDb() {
     );
   `);
 
+  // Migrations for DBs created before user-notes existed (prod has data already).
+  // SQLite has no IF NOT EXISTS for ADD COLUMN, so swallow the duplicate-column error.
+  for (const col of ['user_note TEXT', 'user_note_actor TEXT', 'user_note_updated_at INTEGER']) {
+    try { _db.exec(`ALTER TABLE step_states ADD COLUMN ${col}`); }
+    catch (e) { if (!/duplicate column/i.test(e.message)) throw e; }
+  }
+
   return _db;
 }
 
@@ -117,6 +127,9 @@ function rowToStep(row) {
     activatedAt:   row.activated_at,
     completedAt:   row.completed_at,
     actor:         row.actor,
+    userNote:           row.user_note,
+    userNoteActor:      row.user_note_actor,
+    userNoteUpdatedAt:  row.user_note_updated_at,
   };
 }
 
